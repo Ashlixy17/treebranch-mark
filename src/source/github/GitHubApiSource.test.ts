@@ -141,14 +141,14 @@ describe('GitHubApiSource', () => {
 describe('GitHubRestClient errors', () => {
   it('calls the default browser fetch with its global binding', async () => {
     const originalFetch = globalThis.fetch
-    let receivedThis: unknown
+    let calledWithGlobalThis = false
 
     globalThis.fetch = function (
       this: unknown,
       _input: RequestInfo | URL,
       _init?: RequestInit,
     ): Promise<Response> {
-      receivedThis = this
+      calledWithGlobalThis = this === globalThis
       return Promise.resolve(new Response(JSON.stringify(repositoryFixture), { status: 200 }))
     } as typeof fetch
 
@@ -158,7 +158,7 @@ describe('GitHubRestClient errors', () => {
       await expect(client.getRepository('octo', 'repo')).resolves.toMatchObject({
         full_name: 'octo/repo',
       })
-      expect(receivedThis).toBe(globalThis)
+      expect(calledWithGlobalThis).toBe(true)
     } finally {
       globalThis.fetch = originalFetch
     }
