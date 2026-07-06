@@ -6,6 +6,7 @@ import type { GitSourceSnapshot } from './source'
 
 function App() {
   const [repositoryInput, setRepositoryInput] = useState('vuejs/core')
+  const [branchInput, setBranchInput] = useState('main')
   const [snapshot, setSnapshot] = useState<GitSourceSnapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -21,8 +22,11 @@ function App() {
       const repository = parseRepositoryInput(repositoryInput)
       const nextSnapshot = await source.loadRepository({
         ...repository,
+        branch: branchInput.trim() || undefined,
         options: {
-          maxCommitsPerBranch: 100,
+          maxCommitsPerBranch: 20,
+          includeContributors: false,
+          includePullRequests: false,
         },
       })
 
@@ -47,14 +51,25 @@ function App() {
         </header>
 
         <form className="repo-form" onSubmit={handleSubmit}>
-          <label htmlFor="repository">Repository</label>
           <div className="input-row">
-            <input
-              id="repository"
-              value={repositoryInput}
-              onChange={(event) => setRepositoryInput(event.target.value)}
-              placeholder="owner/repo"
-            />
+            <label className="field" htmlFor="repository">
+              <span>Repository</span>
+              <input
+                id="repository"
+                value={repositoryInput}
+                onChange={(event) => setRepositoryInput(event.target.value)}
+                placeholder="owner/repo"
+              />
+            </label>
+            <label className="field branch-field" htmlFor="branch">
+              <span>Branch</span>
+              <input
+                id="branch"
+                value={branchInput}
+                onChange={(event) => setBranchInput(event.target.value)}
+                placeholder="main"
+              />
+            </label>
             <button type="submit" disabled={isLoading}>
               {isLoading ? 'Loading' : 'Load'}
             </button>

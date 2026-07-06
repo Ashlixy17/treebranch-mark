@@ -84,7 +84,7 @@ export class GitHubRestClient {
   private readonly fetcher: typeof fetch
 
   constructor(options: GitHubRestClientOptions = {}) {
-    this.fetcher = options.fetcher ?? fetch
+    this.fetcher = options.fetcher ?? ((input, init) => globalThis.fetch(input, init))
   }
 
   getRepository(owner: string, repo: string): Promise<GitHubRepositoryResponse> {

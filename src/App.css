@@ -30,27 +30,37 @@ h1 {
 
 .repo-form {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 20px;
 }
 
-.repo-form label {
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field span {
   font-weight: 700;
 }
 
 .input-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 180px) auto;
+  align-items: end;
   gap: 10px;
 }
 
-.input-row input {
-  flex: 1 1 auto;
+.field input {
   min-width: 0;
   height: 42px;
   padding: 0 12px;
   border: 1px solid #c7d0dd;
   border-radius: 6px;
   font: inherit;
+}
+
+.branch-field input {
+  width: 100%;
 }
 
 .input-row button {
@@ -130,7 +140,7 @@ h1 {
   }
 
   .input-row {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 
   .snapshot dl {

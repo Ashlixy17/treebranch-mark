@@ -139,6 +139,31 @@ describe('GitHubApiSource', () => {
 })
 
 describe('GitHubRestClient errors', () => {
+  it('calls the default browser fetch with its global binding', async () => {
+    const originalFetch = globalThis.fetch
+    let receivedThis: unknown
+
+    globalThis.fetch = function (
+      this: unknown,
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ): Promise<Response> {
+      receivedThis = this
+      return Promise.resolve(new Response(JSON.stringify(repositoryFixture), { status: 200 }))
+    } as typeof fetch
+
+    try {
+      const client = new GitHubRestClient()
+
+      await expect(client.getRepository('octo', 'repo')).resolves.toMatchObject({
+        full_name: 'octo/repo',
+      })
+      expect(receivedThis).toBe(globalThis)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
   it('maps 404 responses to not-found source errors', async () => {
     const client = new GitHubRestClient({
       fetcher: async () => new Response('{}', { status: 404 }),
