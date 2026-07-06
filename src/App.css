@@ -48,15 +48,10 @@
 }
 
 .brand-mark {
-  display: inline-grid;
   width: 34px;
   height: 34px;
-  place-items: center;
   border-radius: 8px;
-  background: #0f766e;
-  color: #ffffff;
-  font-size: 12px;
-  letter-spacing: 0;
+  object-fit: contain;
 }
 
 .topbar-meta {
@@ -447,11 +442,6 @@ h2 {
 .app-shell[data-theme='dark'] .json-panel span,
 .app-shell[data-theme='dark'] .empty-panel span {
   color: #94a3b8;
-}
-
-.app-shell[data-theme='dark'] .brand-mark {
-  background: #14b8a6;
-  color: #042f2e;
 }
 
 .app-shell[data-theme='dark'] .eyebrow,

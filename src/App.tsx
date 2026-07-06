@@ -2,7 +2,9 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
 import { GitHubApiSource, GitSourceError, parseRepositoryInput } from './source'
-import type { GitSourceSnapshot } from './source'
+import type { GitSourceErrorCode, GitSourceSnapshot } from './source'
+import { formatSourceError } from './ui/sourceErrorMessages'
+import type { SourceErrorMessages } from './ui/sourceErrorMessages'
 
 type Language = 'en' | 'zh-CN' | 'ja'
 type StatusKey = 'idle' | 'loading' | 'error' | 'ready'
@@ -40,6 +42,7 @@ interface Translation {
   waitingPayload: string
   useDarkTheme: string
   useLightTheme: string
+  errorMessages: SourceErrorMessages
 }
 
 const languageOptions: Array<{ code: Language; label: string }> = [
@@ -86,6 +89,13 @@ const translations = {
     waitingPayload: 'Waiting for normalized source payload.',
     useDarkTheme: 'Switch to dark mode',
     useLightTheme: 'Switch to light mode',
+    errorMessages: {
+      'not-found': 'Repository was not found or is not public.',
+      'rate-limited': 'GitHub API rate limit exceeded. Please try again later.',
+      'network-error': 'Network request failed. Please check your connection.',
+      'unsupported-source': 'This source is not supported yet.',
+      unknown: 'Repository could not be loaded.',
+    },
   },
   'zh-CN': {
     application: '应用',
@@ -124,6 +134,13 @@ const translations = {
     waitingPayload: '等待标准化 Source 数据。',
     useDarkTheme: '切换到暗夜模式',
     useLightTheme: '切换到亮色模式',
+    errorMessages: {
+      'not-found': '仓库不存在，或该仓库不是公开仓库。',
+      'rate-limited': 'GitHub API 请求次数已用完，请稍后再试。',
+      'network-error': '网络请求失败，请检查网络连接。',
+      'unsupported-source': '当前还不支持该数据源。',
+      unknown: '仓库无法加载，请检查输入后重试。',
+    },
   },
   ja: {
     application: 'アプリケーション',
@@ -162,6 +179,13 @@ const translations = {
     waitingPayload: '標準化された Source データを待っています。',
     useDarkTheme: 'ダークモードに切り替え',
     useLightTheme: 'ライトモードに切り替え',
+    errorMessages: {
+      'not-found': 'リポジトリが見つからないか、公開リポジトリではありません。',
+      'rate-limited': 'GitHub API のレート制限に達しました。しばらくしてから再試行してください。',
+      'network-error': 'ネットワーク要求に失敗しました。接続を確認してください。',
+      'unsupported-source': 'このデータソースはまだサポートされていません。',
+      unknown: 'リポジトリを読み込めませんでした。入力内容を確認してください。',
+    },
   },
 } satisfies Record<Language, Translation>
 
@@ -171,12 +195,13 @@ function App() {
   const [repositoryInput, setRepositoryInput] = useState('vuejs/core')
   const [branchInput, setBranchInput] = useState('main')
   const [snapshot, setSnapshot] = useState<GitSourceSnapshot | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [errorCode, setErrorCode] = useState<GitSourceErrorCode | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const t = translations[language]
-  const statusKey: StatusKey = isLoading ? 'loading' : error ? 'error' : snapshot ? 'ready' : 'idle'
+  const statusKey: StatusKey = isLoading ? 'loading' : errorCode ? 'error' : snapshot ? 'ready' : 'idle'
   const latestCommit = snapshot?.commits[0]
   const selectedBranch = snapshot?.branches[0]
+  const errorMessage = errorCode ? formatSourceError(errorCode, t.errorMessages) : null
   const fetchedAt = snapshot
     ? new Intl.DateTimeFormat(language, {
         dateStyle: 'medium',
@@ -187,7 +212,7 @@ function App() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsLoading(true)
-    setError(null)
+    setErrorCode(null)
     setSnapshot(null)
 
     try {
@@ -206,9 +231,9 @@ function App() {
       setSnapshot(nextSnapshot)
     } catch (caughtError) {
       if (caughtError instanceof GitSourceError) {
-        setError(`${caughtError.code}: ${caughtError.message}`)
+        setErrorCode(caughtError.code)
       } else {
-        setError('unknown: Repository could not be loaded.')
+        setErrorCode('unknown')
       }
     } finally {
       setIsLoading(false)
@@ -219,9 +244,7 @@ function App() {
     <main className="app-shell" data-theme={theme}>
       <nav className="topbar" aria-label={t.application}>
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            TB
-          </span>
+          <img className="brand-mark" src="/treebranch-mark.ico" alt="" aria-hidden="true" />
           <span>treebranch-mark</span>
         </div>
         <div className="topbar-meta">
@@ -291,10 +314,10 @@ function App() {
           </form>
         </section>
 
-        {error && (
+        {errorMessage && (
           <section className="alert" role="alert">
             <strong>{t.requestFailed}</strong>
-            <span>{error}</span>
+            <span>{errorMessage}</span>
           </section>
         )}
 
