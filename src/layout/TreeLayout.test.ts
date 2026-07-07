@@ -146,6 +146,35 @@ describe('TreeLayout', () => {
     ])
   })
 
+  it('emits one edge for each parent of a merge commit', () => {
+    const root = commitNodeFixture('root', [], '2026-01-01T00:01:00Z')
+    const left = commitNodeFixture('left', [root], '2026-01-01T00:02:00Z')
+    const right = commitNodeFixture('right', [root], '2026-01-01T00:03:00Z')
+    const merge = commitNodeFixture('merge', [left, right], '2026-01-01T00:04:00Z')
+    const graph = graphFixture([branchNodeFixture('main', merge, true)])
+    const layout = new TreeLayout()
+
+    const result = layout.layout(graph)
+
+    expect(result.edges).toContainEqual({ from: 'left', to: 'merge' })
+    expect(result.edges).toContainEqual({ from: 'right', to: 'merge' })
+    expect(result.edges).toContainEqual({ from: 'root', to: 'left' })
+    expect(result.edges).toContainEqual({ from: 'root', to: 'right' })
+  })
+
+  it('returns the same layout for the same input across repeated runs', () => {
+    const root = commitNodeFixture('root', [], '2026-01-01T00:01:00Z')
+    const featureHead = commitNodeFixture('feature-head', [root], '2026-01-01T00:02:00Z')
+    const mainHead = commitNodeFixture('main-head', [featureHead], '2026-01-01T00:03:00Z')
+    const graph = graphFixture([
+      branchNodeFixture('feature/login', featureHead),
+      branchNodeFixture('main', mainHead, true),
+    ])
+    const layout = new TreeLayout()
+
+    expect(layout.layout(graph)).toEqual(layout.layout(graph))
+  })
+
   it('keeps layout nodes and edges renderer-neutral', () => {
     const root = commitNodeFixture('root')
     const shared = commitNodeFixture('shared', [root], '2026-01-01T00:01:00Z')
