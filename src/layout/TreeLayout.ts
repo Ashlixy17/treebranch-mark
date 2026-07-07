@@ -1,17 +1,23 @@
 import type { BranchGraph, BranchNode } from '../graph'
 import type { CommitNode } from '../parser'
-import { BRANCH_LANE_GAP, type LayoutResult, type TreeLayout as TreeLayoutContract } from './types'
+import {
+  BRANCH_LANE_GAP,
+  COMMIT_COLUMN_GAP,
+  type LayoutResult,
+  type TreeLayout as TreeLayoutContract,
+} from './types'
 
 export class TreeLayout implements TreeLayoutContract {
   layout(branchGraph: BranchGraph): LayoutResult {
     const branches = sortBranches([...branchGraph.branches.values()])
-    const nodes = collectCommitNodes(branches)
-    const yBySha = assignYCoordinates(branches, nodes)
+    const discovered = collectCommitNodes(branches)
+    const xBySha = assignXCoordinates(discovered.nodes, discovered.discoveryOrder)
+    const yBySha = assignYCoordinates(branches, discovered.nodes)
 
     return {
-      nodes: [...nodes.values()].map((node) => ({
+      nodes: [...discovered.nodes.values()].map((node) => ({
         id: node.commit.sha,
-        x: 0,
+        x: xBySha.get(node.commit.sha) ?? 0,
         y: yBySha.get(node.commit.sha) ?? 0,
       })),
       edges: [],
@@ -37,8 +43,13 @@ function sortBranches(branches: BranchNode[]): BranchNode[] {
   })
 }
 
-function collectCommitNodes(branches: BranchNode[]): Map<string, CommitNode> {
+function collectCommitNodes(branches: BranchNode[]): {
+  nodes: Map<string, CommitNode>
+  discoveryOrder: Map<string, number>
+} {
   const nodes = new Map<string, CommitNode>()
+  const discoveryOrder = new Map<string, number>()
+  let nextDiscoveryIndex = 0
 
   for (const branch of branches) {
     const stack = [branch.head]
@@ -51,11 +62,48 @@ function collectCommitNodes(branches: BranchNode[]): Map<string, CommitNode> {
       }
 
       nodes.set(node.commit.sha, node)
+      discoveryOrder.set(node.commit.sha, nextDiscoveryIndex)
+      nextDiscoveryIndex += 1
       stack.push(...node.parents)
     }
   }
 
-  return nodes
+  return { nodes, discoveryOrder }
+}
+
+function assignXCoordinates(
+  nodes: Map<string, CommitNode>,
+  discoveryOrder: Map<string, number>,
+): Map<string, number> {
+  const sorted = [...nodes.values()].sort((left, right) => {
+    const leftTime = commitTimestamp(left)
+    const rightTime = commitTimestamp(right)
+
+    if (leftTime !== rightTime) {
+      return leftTime - rightTime
+    }
+
+    const leftDiscovery = discoveryOrder.get(left.commit.sha) ?? 0
+    const rightDiscovery = discoveryOrder.get(right.commit.sha) ?? 0
+
+    if (leftDiscovery !== rightDiscovery) {
+      return leftDiscovery - rightDiscovery
+    }
+
+    return left.commit.sha.localeCompare(right.commit.sha)
+  })
+  const xBySha = new Map<string, number>()
+
+  sorted.forEach((node, index) => {
+    xBySha.set(node.commit.sha, index * COMMIT_COLUMN_GAP)
+  })
+
+  return xBySha
+}
+
+function commitTimestamp(node: CommitNode): number {
+  const timestamp = node.commit.committedAt ?? node.commit.authoredAt ?? ''
+  return Date.parse(timestamp) || 0
 }
 
 function assignYCoordinates(branches: BranchNode[], nodes: Map<string, CommitNode>): Map<string, number> {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { BranchGraph, BranchNode } from '../graph'
 import type { CommitNode } from '../parser'
 import type { GitBranch, GitCommit } from '../source'
-import { BRANCH_LANE_GAP } from './types'
+import { BRANCH_LANE_GAP, COMMIT_COLUMN_GAP } from './types'
 import { TreeLayout } from './TreeLayout'
 
 describe('TreeLayout', () => {
@@ -51,6 +51,52 @@ describe('TreeLayout', () => {
     expect(nodeById(result, 'main-head')?.y).toBe(0)
     expect(nodeById(result, 'feature-head')?.y).toBe(BRANCH_LANE_GAP)
     expect(nodeById(result, 'shared')?.y).toBe(0)
+  })
+
+  it('assigns increasing x coordinates by commit time', () => {
+    const root = commitNodeFixture('root', [], '2026-01-01T00:01:00Z')
+    const middle = commitNodeFixture('middle', [root], '2026-01-01T00:02:00Z')
+    const head = commitNodeFixture('head', [middle], '2026-01-01T00:03:00Z')
+    const graph = graphFixture([branchNodeFixture('main', head, true)])
+    const layout = new TreeLayout()
+
+    const result = layout.layout(graph)
+
+    expect(nodeById(result, 'root')?.x).toBe(0)
+    expect(nodeById(result, 'middle')?.x).toBe(COMMIT_COLUMN_GAP)
+    expect(nodeById(result, 'head')?.x).toBe(COMMIT_COLUMN_GAP * 2)
+  })
+
+  it('uses stable discovery order when commits have the same timestamp', () => {
+    const main = commitNodeFixture('main-head', [], '2026-01-01T00:01:00Z')
+    const feature = commitNodeFixture('feature-head', [], '2026-01-01T00:01:00Z')
+    const graph = graphFixture([
+      branchNodeFixture('feature/login', feature),
+      branchNodeFixture('main', main, true),
+    ])
+    const layout = new TreeLayout()
+
+    const result = layout.layout(graph)
+
+    expect(nodeById(result, 'main-head')?.x).toBe(0)
+    expect(nodeById(result, 'feature-head')?.x).toBe(COMMIT_COLUMN_GAP)
+  })
+
+  it('places branch head commits on their own branch lanes before shared ancestors', () => {
+    const root = commitNodeFixture('root', [], '2026-01-01T00:01:00Z')
+    const featureHead = commitNodeFixture('feature-head', [root], '2026-01-01T00:02:00Z')
+    const mainHead = commitNodeFixture('main-head', [featureHead], '2026-01-01T00:03:00Z')
+    const graph = graphFixture([
+      branchNodeFixture('main', mainHead, true),
+      branchNodeFixture('feature/login', featureHead),
+    ])
+    const layout = new TreeLayout()
+
+    const result = layout.layout(graph)
+
+    expect(nodeById(result, 'main-head')?.y).toBe(0)
+    expect(nodeById(result, 'feature-head')?.y).toBe(BRANCH_LANE_GAP)
+    expect(nodeById(result, 'root')?.y).toBe(0)
   })
 })
 
