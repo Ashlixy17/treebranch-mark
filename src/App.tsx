@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
+import { RenderPipeline } from './pipeline'
 import { GitHubApiSource, GitSourceError, parseRepositoryInput } from './source'
 import type { GitSourceErrorCode, GitSourceSnapshot } from './source'
 import { formatSourceError } from './ui/sourceErrorMessages'
@@ -22,7 +23,7 @@ interface Translation {
   repositoryControls: string
   repository: string
   branch: string
-  loadSnapshot: string
+  generateGraph: string
   requestFailed: string
   snapshotSummary: string
   branches: string
@@ -37,6 +38,9 @@ interface Translation {
   name: string
   headSha: string
   latestCommit: string
+  graphPreview: string
+  noGraph: string
+  waitingGraph: string
   snapshotJson: string
   noSnapshot: string
   waitingPayload: string
@@ -54,7 +58,7 @@ const languageOptions: Array<{ code: Language; label: string }> = [
 const translations = {
   en: {
     application: 'Application',
-    sourceLayer: 'Source Layer',
+    sourceLayer: 'Pipeline',
     status: {
       idle: 'Idle',
       loading: 'Loading',
@@ -63,13 +67,13 @@ const translations = {
     },
     language: 'Language',
     eyebrow: 'Git History Model',
-    title: 'Source snapshot console',
+    title: 'Branch graph viewer',
     fetched: 'Fetched',
     notLoaded: 'Not loaded',
     repositoryControls: 'Repository controls',
     repository: 'Repository',
     branch: 'Branch',
-    loadSnapshot: 'Load snapshot',
+    generateGraph: 'Generate SVG',
     requestFailed: 'Request failed',
     snapshotSummary: 'Git source snapshot summary',
     branches: 'Branches',
@@ -84,6 +88,9 @@ const translations = {
     name: 'Name',
     headSha: 'Head SHA',
     latestCommit: 'Latest commit',
+    graphPreview: 'SVG graph preview',
+    noGraph: 'No graph generated',
+    waitingGraph: 'Run the pipeline to generate the first SVG graph.',
     snapshotJson: 'Snapshot JSON',
     noSnapshot: 'No snapshot loaded',
     waitingPayload: 'Waiting for normalized source payload.',
@@ -99,7 +106,7 @@ const translations = {
   },
   'zh-CN': {
     application: '应用',
-    sourceLayer: 'Source 层',
+    sourceLayer: 'Pipeline',
     status: {
       idle: '待机',
       loading: '加载中',
@@ -108,13 +115,13 @@ const translations = {
     },
     language: '语言',
     eyebrow: 'Git 历史模型',
-    title: 'Source 快照控制台',
+    title: '分支图查看器',
     fetched: '获取时间',
     notLoaded: '尚未加载',
     repositoryControls: '仓库控制',
     repository: '仓库',
     branch: '分支',
-    loadSnapshot: '加载快照',
+    generateGraph: '生成 SVG',
     requestFailed: '请求失败',
     snapshotSummary: 'Git Source 快照摘要',
     branches: '分支',
@@ -129,8 +136,11 @@ const translations = {
     name: '名称',
     headSha: 'Head SHA',
     latestCommit: '最新提交',
+    graphPreview: 'SVG 图预览',
+    noGraph: '尚未生成图',
+    waitingGraph: '运行 Pipeline 后会生成第一张 SVG 图。',
     snapshotJson: '快照 JSON',
-    noSnapshot: '尚无快照',
+    noSnapshot: '暂无快照',
     waitingPayload: '等待标准化 Source 数据。',
     useDarkTheme: '切换到暗夜模式',
     useLightTheme: '切换到亮色模式',
@@ -144,7 +154,7 @@ const translations = {
   },
   ja: {
     application: 'アプリケーション',
-    sourceLayer: 'Source レイヤー',
+    sourceLayer: 'Pipeline',
     status: {
       idle: '待機中',
       loading: '読み込み中',
@@ -153,13 +163,13 @@ const translations = {
     },
     language: '言語',
     eyebrow: 'Git 履歴モデル',
-    title: 'Source スナップショットコンソール',
+    title: 'ブランチグラフビューア',
     fetched: '取得日時',
     notLoaded: '未読み込み',
     repositoryControls: 'リポジトリ操作',
     repository: 'リポジトリ',
     branch: 'ブランチ',
-    loadSnapshot: 'スナップショットを読み込む',
+    generateGraph: 'SVG を生成',
     requestFailed: 'リクエスト失敗',
     snapshotSummary: 'Git Source スナップショット概要',
     branches: 'ブランチ',
@@ -174,6 +184,9 @@ const translations = {
     name: '名前',
     headSha: 'Head SHA',
     latestCommit: '最新コミット',
+    graphPreview: 'SVG グラフプレビュー',
+    noGraph: 'グラフはまだ生成されていません',
+    waitingGraph: 'Pipeline を実行すると最初の SVG グラフが生成されます。',
     snapshotJson: 'スナップショット JSON',
     noSnapshot: 'スナップショット未読み込み',
     waitingPayload: '標準化された Source データを待っています。',
@@ -184,7 +197,7 @@ const translations = {
       'rate-limited': 'GitHub API のレート制限に達しました。しばらくしてから再試行してください。',
       'network-error': 'ネットワーク要求に失敗しました。接続を確認してください。',
       'unsupported-source': 'このデータソースはまだサポートされていません。',
-      unknown: 'リポジトリを読み込めませんでした。入力内容を確認してください。',
+      unknown: 'リポジトリを読み込めませんでした。入力内容を確認して再試行してください。',
     },
   },
 } satisfies Record<Language, Translation>
@@ -195,6 +208,7 @@ function App() {
   const [repositoryInput, setRepositoryInput] = useState('vuejs/core')
   const [branchInput, setBranchInput] = useState('main')
   const [snapshot, setSnapshot] = useState<GitSourceSnapshot | null>(null)
+  const [svg, setSvg] = useState<string | null>(null)
   const [errorCode, setErrorCode] = useState<GitSourceErrorCode | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const t = translations[language]
@@ -214,11 +228,14 @@ function App() {
     setIsLoading(true)
     setErrorCode(null)
     setSnapshot(null)
+    setSvg(null)
 
     try {
-      const source = new GitHubApiSource()
+      const pipeline = new RenderPipeline({
+        source: new GitHubApiSource(),
+      })
       const repository = parseRepositoryInput(repositoryInput)
-      const nextSnapshot = await source.loadRepository({
+      const result = await pipeline.render({
         ...repository,
         branch: branchInput.trim() || undefined,
         options: {
@@ -228,7 +245,8 @@ function App() {
         },
       })
 
-      setSnapshot(nextSnapshot)
+      setSnapshot(result.snapshot)
+      setSvg(result.svg)
     } catch (caughtError) {
       if (caughtError instanceof GitSourceError) {
         setErrorCode(caughtError.code)
@@ -309,7 +327,7 @@ function App() {
               />
             </label>
             <button type="submit" disabled={isLoading}>
-              {isLoading ? t.status.loading : t.loadSnapshot}
+              {isLoading ? t.status.loading : t.generateGraph}
             </button>
           </form>
         </section>
@@ -396,6 +414,21 @@ function App() {
                   </dl>
                 </section>
               </div>
+
+              <section className="svg-panel">
+                <div className="panel-heading">
+                  <h2>{t.graphPreview}</h2>
+                  <span>svg</span>
+                </div>
+                {svg ? (
+                  <div className="svg-preview" dangerouslySetInnerHTML={{ __html: svg }} />
+                ) : (
+                  <div className="svg-empty">
+                    <strong>{t.noGraph}</strong>
+                    <span>{t.waitingGraph}</span>
+                  </div>
+                )}
+              </section>
 
               <section className="json-panel">
                 <div className="panel-heading">
