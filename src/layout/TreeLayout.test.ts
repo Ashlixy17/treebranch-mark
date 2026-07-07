@@ -82,6 +82,34 @@ describe('TreeLayout', () => {
     expect(nodeById(result, 'feature-head')?.x).toBe(COMMIT_COLUMN_GAP)
   })
 
+  it('falls back to authoredAt when committedAt is null', () => {
+    const earlier = commitNodeFixture('earlier', [], '2026-01-01T00:01:00Z')
+    const later = commitNodeFixture('later', [], null, '2026-01-01T00:02:00Z')
+    const graph = graphFixture([
+      branchNodeFixture('main', earlier, true),
+      branchNodeFixture('feature/login', later),
+    ])
+    const layout = new TreeLayout()
+
+    const result = layout.layout(graph)
+
+    expect(nodeById(result, 'earlier')?.x).toBe(0)
+    expect(nodeById(result, 'later')?.x).toBe(COMMIT_COLUMN_GAP)
+  })
+
+  it('keeps the first sorted branch owning a shared head y lane', () => {
+    const sharedHead = commitNodeFixture('shared-head', [], '2026-01-01T00:01:00Z')
+    const graph = graphFixture([
+      branchNodeFixture('beta', sharedHead),
+      branchNodeFixture('alpha', sharedHead),
+    ])
+    const layout = new TreeLayout()
+
+    const result = layout.layout(graph)
+
+    expect(nodeById(result, 'shared-head')?.y).toBe(0)
+  })
+
   it('emits edges from parent commits to child commits', () => {
     const root = commitNodeFixture('root', [], '2026-01-01T00:01:00Z')
     const child = commitNodeFixture('child', [root], '2026-01-01T00:02:00Z')
@@ -214,10 +242,11 @@ function nodeById(result: { nodes: { id: string; x: number; y: number }[] }, id:
 function commitNodeFixture(
   sha: string,
   parents: CommitNode[] = [],
-  committedAt = '2026-01-01T00:00:00Z',
+  committedAt: string | null = '2026-01-01T00:00:00Z',
+  authoredAt: string | null = committedAt,
 ): CommitNode {
   const node: CommitNode = {
-    commit: commitFixture(sha, parents.map((parent) => parent.commit.sha), committedAt),
+    commit: commitFixture(sha, parents.map((parent) => parent.commit.sha), committedAt, authoredAt),
     parents,
     children: [],
   }
@@ -229,7 +258,12 @@ function commitNodeFixture(
   return node
 }
 
-function commitFixture(sha: string, parents: string[], committedAt: string): GitCommit {
+function commitFixture(
+  sha: string,
+  parents: string[],
+  committedAt: string | null,
+  authoredAt: string | null,
+): GitCommit {
   return {
     sha,
     parents,
@@ -248,7 +282,7 @@ function commitFixture(sha: string, parents: string[], committedAt: string): Git
       avatarUrl: null,
       profileUrl: null,
     },
-    authoredAt: committedAt,
+    authoredAt,
     committedAt,
     url: `https://github.com/octo/repo/commit/${sha}`,
   }
