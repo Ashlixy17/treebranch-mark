@@ -79,6 +79,23 @@ describe('RenderModelBuilder', () => {
     expect(JSON.parse(JSON.stringify(renderModel))).toEqual(renderModel)
   })
 
+  it('returns the same render model for the same layout and branch graph', () => {
+    const builder = new RenderModelBuilder()
+    const layout: LayoutResult = {
+      nodes: [
+        { id: 'abcdef1234567890', x: 120, y: 100 },
+        { id: '1234567890abcdef', x: 240, y: 100 },
+      ],
+      edges: [{ from: 'abcdef1234567890', to: '1234567890abcdef' }],
+    }
+    const graph = graphFixture([
+      commitNodeFixture('abcdef1234567890'),
+      commitNodeFixture('1234567890abcdef'),
+    ])
+
+    expect(builder.build(layout, graph)).toEqual(builder.build(layout, graph))
+  })
+
   it('does not expose renderer-specific data on render nodes or edges', () => {
     const builder = new RenderModelBuilder()
     const layout: LayoutResult = {
