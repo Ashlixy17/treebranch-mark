@@ -108,7 +108,7 @@ describe('SvgRenderer', () => {
       edges: [{ from: 'abcdef1234567890', to: '1234567890abcdef', styleToken: 'commit-edge' }],
     }
 
-    expect(renderer.render(model)).toBe(goldenSvg.trim())
+    expect(renderer.render(model)).toBe(normalizeSvg(goldenSvg))
   })
 })
 
@@ -121,4 +121,8 @@ function nodeFixture(id: string, x: number, y: number, label = id) {
     kind: 'commit' as const,
     styleToken: 'commit' as const,
   }
+}
+
+function normalizeSvg(svg: string): string {
+  return svg.trim().replaceAll('\r\n', '\n')
 }
