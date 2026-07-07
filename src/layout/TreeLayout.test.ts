@@ -35,6 +35,23 @@ describe('TreeLayout', () => {
     expect(nodeById(result, 'feature-head')?.y).toBe(BRANCH_LANE_GAP)
     expect(nodeById(result, 'hotfix-head')?.y).toBe(BRANCH_LANE_GAP * 2)
   })
+
+  it('keeps later branch heads on their own lanes even when earlier branches reach them', () => {
+    const shared = commitNodeFixture('shared', [], '2026-01-01T00:00:00Z')
+    const feature = commitNodeFixture('feature-head', [shared], '2026-01-01T00:01:00Z')
+    const main = commitNodeFixture('main-head', [feature], '2026-01-01T00:02:00Z')
+    const graph = graphFixture([
+      branchNodeFixture('main', main, true),
+      branchNodeFixture('feature/login', feature),
+    ])
+    const layout = new TreeLayout()
+
+    const result = layout.layout(graph)
+
+    expect(nodeById(result, 'main-head')?.y).toBe(0)
+    expect(nodeById(result, 'feature-head')?.y).toBe(BRANCH_LANE_GAP)
+    expect(nodeById(result, 'shared')?.y).toBe(0)
+  })
 })
 
 function graphFixture(branches: BranchNode[]): BranchGraph {
