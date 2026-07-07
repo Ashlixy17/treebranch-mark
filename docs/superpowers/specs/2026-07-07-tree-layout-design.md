@@ -181,6 +181,10 @@ MVP ordering:
 2. Use `authoredAt` as fallback
 3. Use stable traversal order as final fallback
 
+When multiple commits have the same timestamp, use stable discovery order as the tie-breaker.
+
+If discovery order is also equal, use SHA string comparison as the final deterministic tie-breaker.
+
 The layout only needs to guarantee that commits in chronological order have non-decreasing `x` values.
 
 Recommended MVP spacing:
@@ -196,6 +200,15 @@ For the MVP, a commit may appear in the first branch lane that reaches it.
 This means shared commits do not need duplicate layout nodes per branch in Step 4.
 
 Branch ownership is not inferred. The lane is only a visual placement strategy.
+
+Branch head placement has one additional rule:
+
+- If a commit is the `head` of a branch, that commit should be placed on that branch's own lane.
+- Shared ancestor commits can use the first sorted branch lane that reaches them.
+
+If multiple branches point to the same head SHA, the first branch in sorted order owns that layout node.
+
+This keeps branch heads visually anchored to their own branches without inferring parent branch relationships.
 
 ### Edge Generation
 
@@ -216,6 +229,14 @@ Recommended direction:
 ```
 
 Missing parents should not crash Layout. Missing-parent warnings are already handled by Parser, so Layout can simply skip edges whose endpoint is not present in `LayoutResult.nodes`.
+
+Duplicate edges must be removed.
+
+The dedupe key should be:
+
+```ts
+`${from}->${to}`
+```
 
 ## 7. Constraints
 
@@ -359,5 +380,7 @@ Tree Layout is complete when:
 - `LayoutResult` can be converted directly into RenderModel
 - Linear histories produce increasing `x` coordinates
 - Multiple branches receive separate `y` lanes
+- Branch head commits are placed on their own branch lanes
 - Missing edge endpoints are skipped without throwing
-- Unit tests cover branch ordering, lane assignment, chronological x assignment, edge generation, and empty graphs
+- Duplicate edges are removed
+- Unit tests cover branch ordering, lane assignment, branch head lane priority, chronological x assignment, equal timestamp tie-breaking, edge generation, edge deduplication, and empty graphs
