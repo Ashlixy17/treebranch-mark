@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -24 168 48" role="img" aria-label="Git history graph">
+  <line x1="0" y1="0" x2="120" y2="0" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.6" />
+  <circle cx="0" cy="0" r="6" fill="currentColor" />
+  <text x="0" y="20" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="currentColor">abcdef1</text>
+  <circle cx="120" cy="0" r="6" fill="currentColor" />
+  <text x="120" y="20" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="currentColor">1234567</text>
+</svg>
