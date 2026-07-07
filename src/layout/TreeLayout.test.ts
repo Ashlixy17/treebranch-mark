@@ -120,35 +120,41 @@ describe('TreeLayout', () => {
 
   it('keeps layout nodes and edges renderer-neutral', () => {
     const root = commitNodeFixture('root')
-    const child = commitNodeFixture('child', [root])
-    const graph = graphFixture([branchNodeFixture('main', child, true)])
+    const shared = commitNodeFixture('shared', [root], '2026-01-01T00:01:00Z')
+    const mainHead = commitNodeFixture('main-head', [shared], '2026-01-01T00:02:00Z')
+    const featureHead = commitNodeFixture('feature-head', [shared], '2026-01-01T00:03:00Z')
+    const graph = graphFixture([
+      branchNodeFixture('main', mainHead, true),
+      branchNodeFixture('feature/login', featureHead),
+    ])
     const layout = new TreeLayout()
 
     const result = layout.layout(graph)
 
-    expect(Object.keys(result.nodes[0]).sort()).toEqual(['id', 'x', 'y'])
-    expect(Object.keys(result.edges[0]).sort()).toEqual(['from', 'to'])
+    expect(result.nodes.length).toBeGreaterThan(0)
+    expect(result.edges.length).toBeGreaterThan(0)
+    for (const node of result.nodes) {
+      expect(Object.keys(node).sort()).toEqual(['id', 'x', 'y'])
+    }
+    for (const edge of result.edges) {
+      expect(Object.keys(edge).sort()).toEqual(['from', 'to'])
+    }
   })
 
   it('does not mutate the branch graph or commit nodes', () => {
     const root = commitNodeFixture('root')
-    const child = commitNodeFixture('child', [root])
-    const branch = branchNodeFixture('main', child, true)
-    const graph = graphFixture([branch])
-    const before = {
-      branchCount: graph.branches.size,
-      reachable: [...branch.reachableCommits],
-      childParentCount: child.parents.length,
-      rootChildCount: root.children.length,
-    }
+    const shared = commitNodeFixture('shared', [root], '2026-01-01T00:01:00Z')
+    const mainHead = commitNodeFixture('main-head', [shared], '2026-01-01T00:02:00Z')
+    const featureHead = commitNodeFixture('feature-head', [shared], '2026-01-01T00:03:00Z')
+    const mainBranch = branchNodeFixture('main', mainHead, true)
+    const featureBranch = branchNodeFixture('feature/login', featureHead)
+    const graph = graphFixture([mainBranch, featureBranch])
+    const before = snapshotBranchGraph(graph)
     const layout = new TreeLayout()
 
     layout.layout(graph)
 
-    expect(graph.branches.size).toBe(before.branchCount)
-    expect([...branch.reachableCommits]).toEqual(before.reachable)
-    expect(child.parents.length).toBe(before.childParentCount)
-    expect(root.children.length).toBe(before.rootChildCount)
+    expect(snapshotBranchGraph(graph)).toEqual(before)
   })
 
   it('places branch head commits on their own branch lanes before shared ancestors', () => {
@@ -255,4 +261,53 @@ function branchFixture(name: string, headSha: string, isDefault: boolean): GitBr
     isDefault,
     url: `https://github.com/octo/repo/tree/${name}`,
   }
+}
+
+function snapshotBranchGraph(graph: BranchGraph) {
+  return {
+    branches: [...graph.branches.entries()].map(([name, branchNode]) => ({
+      name,
+      branch: { ...branchNode.branch },
+      reachableCommits: [...branchNode.reachableCommits],
+      headSha: branchNode.head.commit.sha,
+    })),
+    commits: snapshotCommitNodes(graph),
+  }
+}
+
+function snapshotCommitNodes(graph: BranchGraph) {
+  const nodes = collectCommitNodes(graph)
+
+  return [...nodes.values()]
+    .sort((left, right) => left.commit.sha.localeCompare(right.commit.sha))
+    .map((node) => ({
+      sha: node.commit.sha,
+      commit: {
+        ...node.commit,
+        author: { ...node.commit.author },
+        committer: { ...node.commit.committer },
+        parents: [...node.commit.parents],
+      },
+      parents: node.parents.map((parent) => parent.commit.sha),
+      children: node.children.map((child) => child.commit.sha),
+    }))
+}
+
+function collectCommitNodes(graph: BranchGraph) {
+  const nodes = new Map<string, CommitNode>()
+  const stack = [...graph.branches.values()].map((branch) => branch.head)
+
+  while (stack.length > 0) {
+    const node = stack.pop()
+
+    if (!node || nodes.has(node.commit.sha)) {
+      continue
+    }
+
+    nodes.set(node.commit.sha, node)
+    stack.push(...node.parents)
+    stack.push(...node.children)
+  }
+
+  return nodes
 }
