@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Local agent workflow scratch files
+.superpowers/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
