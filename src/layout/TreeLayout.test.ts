@@ -118,6 +118,39 @@ describe('TreeLayout', () => {
     ])
   })
 
+  it('keeps layout nodes and edges renderer-neutral', () => {
+    const root = commitNodeFixture('root')
+    const child = commitNodeFixture('child', [root])
+    const graph = graphFixture([branchNodeFixture('main', child, true)])
+    const layout = new TreeLayout()
+
+    const result = layout.layout(graph)
+
+    expect(Object.keys(result.nodes[0]).sort()).toEqual(['id', 'x', 'y'])
+    expect(Object.keys(result.edges[0]).sort()).toEqual(['from', 'to'])
+  })
+
+  it('does not mutate the branch graph or commit nodes', () => {
+    const root = commitNodeFixture('root')
+    const child = commitNodeFixture('child', [root])
+    const branch = branchNodeFixture('main', child, true)
+    const graph = graphFixture([branch])
+    const before = {
+      branchCount: graph.branches.size,
+      reachable: [...branch.reachableCommits],
+      childParentCount: child.parents.length,
+      rootChildCount: root.children.length,
+    }
+    const layout = new TreeLayout()
+
+    layout.layout(graph)
+
+    expect(graph.branches.size).toBe(before.branchCount)
+    expect([...branch.reachableCommits]).toEqual(before.reachable)
+    expect(child.parents.length).toBe(before.childParentCount)
+    expect(root.children.length).toBe(before.rootChildCount)
+  })
+
   it('places branch head commits on their own branch lanes before shared ancestors', () => {
     const root = commitNodeFixture('root', [], '2026-01-01T00:01:00Z')
     const featureHead = commitNodeFixture('feature-head', [root], '2026-01-01T00:02:00Z')
