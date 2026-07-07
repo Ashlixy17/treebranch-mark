@@ -82,6 +82,42 @@ describe('TreeLayout', () => {
     expect(nodeById(result, 'feature-head')?.x).toBe(COMMIT_COLUMN_GAP)
   })
 
+  it('emits edges from parent commits to child commits', () => {
+    const root = commitNodeFixture('root', [], '2026-01-01T00:01:00Z')
+    const child = commitNodeFixture('child', [root], '2026-01-01T00:02:00Z')
+    const graph = graphFixture([branchNodeFixture('main', child, true)])
+    const layout = new TreeLayout()
+
+    const result = layout.layout(graph)
+
+    expect(result.edges).toEqual([
+      {
+        from: 'root',
+        to: 'child',
+      },
+    ])
+  })
+
+  it('deduplicates edges reached through multiple branches', () => {
+    const root = commitNodeFixture('root', [], '2026-01-01T00:01:00Z')
+    const shared = commitNodeFixture('shared', [root], '2026-01-01T00:02:00Z')
+    const mainHead = commitNodeFixture('main-head', [shared], '2026-01-01T00:03:00Z')
+    const featureHead = commitNodeFixture('feature-head', [shared], '2026-01-01T00:04:00Z')
+    const graph = graphFixture([
+      branchNodeFixture('main', mainHead, true),
+      branchNodeFixture('feature/login', featureHead),
+    ])
+    const layout = new TreeLayout()
+
+    const result = layout.layout(graph)
+
+    expect(result.edges).toEqual([
+      { from: 'shared', to: 'main-head' },
+      { from: 'root', to: 'shared' },
+      { from: 'shared', to: 'feature-head' },
+    ])
+  })
+
   it('places branch head commits on their own branch lanes before shared ancestors', () => {
     const root = commitNodeFixture('root', [], '2026-01-01T00:01:00Z')
     const featureHead = commitNodeFixture('feature-head', [root], '2026-01-01T00:02:00Z')

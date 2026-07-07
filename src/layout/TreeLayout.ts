@@ -3,6 +3,7 @@ import type { CommitNode } from '../parser'
 import {
   BRANCH_LANE_GAP,
   COMMIT_COLUMN_GAP,
+  type LayoutEdge,
   type LayoutResult,
   type TreeLayout as TreeLayoutContract,
 } from './types'
@@ -20,7 +21,7 @@ export class TreeLayout implements TreeLayoutContract {
         x: xBySha.get(node.commit.sha) ?? 0,
         y: yBySha.get(node.commit.sha) ?? 0,
       })),
-      edges: [],
+      edges: collectEdges(discovered.nodes),
     }
   }
 }
@@ -126,4 +127,32 @@ function assignYCoordinates(branches: BranchNode[], nodes: Map<string, CommitNod
   })
 
   return yBySha
+}
+
+function collectEdges(nodes: Map<string, CommitNode>): LayoutEdge[] {
+  const edges: LayoutEdge[] = []
+  const seen = new Set<string>()
+
+  for (const node of nodes.values()) {
+    for (const parent of node.parents) {
+      if (!nodes.has(parent.commit.sha)) {
+        continue
+      }
+
+      const edge: LayoutEdge = {
+        from: parent.commit.sha,
+        to: node.commit.sha,
+      }
+      const key = `${edge.from}->${edge.to}`
+
+      if (seen.has(key)) {
+        continue
+      }
+
+      seen.add(key)
+      edges.push(edge)
+    }
+  }
+
+  return edges
 }
