@@ -2,7 +2,7 @@
 
 treebranch-mark 是一个用于可视化 GitHub 项目分支演进和协作历程的 Web 工具。
 
-项目目标是把 Git 仓库历史拆成清晰的数据流水线：先从数据源读取统一快照，再解析 Commit DAG，后续继续构建 Branch Graph、时间线布局和 SVG 渲染。
+项目目标是把 Git 仓库历史拆成清晰的数据流水线：从数据源读取统一快照，解析 Commit DAG，构建 Branch Graph，计算 Tree Layout，再转换为 Renderer 可消费的 RenderModel。下一步将基于 RenderModel 输出第一版 SVG。
 
 ## 当前状态
 
@@ -342,6 +342,7 @@ RenderModel 负责：
 - 为 commit 节点生成短 SHA label
 - 提供 renderer-neutral 的 `styleToken`
 - 保持输出可 JSON 序列化
+- 保持同样输入得到稳定输出
 
 RenderModel 不负责：
 
@@ -473,6 +474,7 @@ npm run preview
 - 相同时间戳稳定排序
 - parent-to-child edge 生成
 - edge 去重
+- Tree Layout deterministic output
 - `LayoutResult` renderer-neutral 输出
 - Layout 不修改 `BranchGraph` / `CommitNode`
 - RenderModel empty layout
@@ -480,6 +482,7 @@ npm run preview
 - Layout edge 到 commit-edge render edge 的映射
 - RenderModel fallback label
 - RenderModel JSON 序列化
+- RenderModel deterministic output
 - RenderModel renderer-neutral 输出
 - RenderModel 不修改 `LayoutResult` / `BranchGraph`
 
