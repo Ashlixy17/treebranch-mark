@@ -341,15 +341,6 @@ function App() {
 
         <section className="control-panel" aria-label={t.repositoryControls}>
           <form className="repo-form" onSubmit={handleSubmit}>
-            <label className="field" htmlFor="repository">
-              <span>{t.repository}</span>
-              <input
-                id="repository"
-                value={repositoryInput}
-                onChange={(event) => setRepositoryInput(event.target.value)}
-                placeholder="owner/repo"
-              />
-            </label>
             <label className="field token-field" htmlFor="github-token">
               <span>{t.githubToken}</span>
               <input
@@ -361,6 +352,15 @@ function App() {
                 autoComplete="off"
               />
               <small>{t.githubTokenHint}</small>
+            </label>
+            <label className="field repo-field" htmlFor="repository">
+              <span>{t.repository}</span>
+              <input
+                id="repository"
+                value={repositoryInput}
+                onChange={(event) => setRepositoryInput(event.target.value)}
+                placeholder="owner/repo"
+              />
             </label>
             <label className="field branch-field" htmlFor="branch">
               <span>{t.branch}</span>

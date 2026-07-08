@@ -231,7 +231,7 @@ h2 {
 
 .repo-form {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(220px, 0.55fr) minmax(120px, 180px) auto;
+  grid-template-columns: minmax(280px, 1fr) minmax(120px, 180px) auto;
   align-items: end;
   gap: 12px;
 }
@@ -242,7 +242,24 @@ h2 {
 }
 
 .token-field {
+  grid-column: 1;
+  grid-row: 1;
   min-width: min(100%, 280px);
+}
+
+.repo-field {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.branch-field {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.repo-form button {
+  grid-column: 3;
+  grid-row: 2;
 }
 
 .field small {
@@ -642,6 +659,14 @@ h2 {
   .repo-form,
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+
+  .repo-field,
+  .token-field,
+  .branch-field,
+  .repo-form button {
+    grid-column: auto;
+    grid-row: auto;
   }
 
   .metric-grid {

@@ -79,6 +79,19 @@ describe('App GitHub token input', () => {
 
     expect(window.localStorage.getItem(TOKEN_STORAGE_KEY)).toBeNull()
   })
+
+  it('places the token field above the repository field', () => {
+    renderApp()
+
+    const tokenField = getTokenInput().closest('label')
+    const repositoryField = document.querySelector<HTMLInputElement>('#repository')?.closest('label')
+
+    expect(tokenField).not.toBeNull()
+    expect(repositoryField).not.toBeNull()
+    expect(tokenField?.compareDocumentPosition(repositoryField as Node)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+  })
 })
 
 function renderApp() {
