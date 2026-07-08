@@ -845,7 +845,7 @@ src/
 - [x] v0.1.0-alpha Milestone Design
 - [x] v0.1.0-alpha ADR
 - [x] v0.1.0-alpha Release Checklist
-- [ ] v0.1.0-alpha Release Notes
+- [x] v0.1.0-alpha Release Notes
 - [ ] Demo Screenshot
 - [x] GitHub Token 支持
 - [x] GitHub Token 安全测试

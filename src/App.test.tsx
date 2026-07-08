@@ -169,7 +169,7 @@ describe('App GitHub token input', () => {
       expect(capturedHeaders.every((headers) => headers.get('authorization') === 'Bearer ghp_submit_token')).toBe(
         true,
       )
-      expect(document.body.textContent).toContain('vuejs/core')
+      expect(getRepositoryMetricValue()).toBe('core')
       expect(document.body.textContent).toContain('GitHub API Status')
       expect(document.body.textContent).toContain('Authenticated')
       expect(document.body.textContent).toContain('Remaining: 4978 / 5000')
@@ -211,6 +211,13 @@ function getTokenInput(): HTMLInputElement {
 
   expect(input).not.toBeNull()
   return input as HTMLInputElement
+}
+
+function getRepositoryMetricValue(): string {
+  const value = document.querySelector<HTMLElement>('.metric-grid div:first-child dd')
+
+  expect(value).not.toBeNull()
+  return value?.textContent ?? ''
 }
 
 function changeInputValue(input: HTMLInputElement, value: string) {

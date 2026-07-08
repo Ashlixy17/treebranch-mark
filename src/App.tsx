@@ -371,14 +371,16 @@ function App() {
             <p className="eyebrow">{t.eyebrow}</p>
             <h1>{t.title}</h1>
           </div>
-          <div className="run-card">
-            <span>{t.fetched}</span>
-            <strong>{fetchedAt}</strong>
-          </div>
-          <div className="run-card api-card">
-            <span>{t.apiStatus}</span>
-            <strong>{apiAuthentication}</strong>
-            {apiRemaining && <span>{apiRemaining}</span>}
+          <div className="hero-cards">
+            <div className="run-card">
+              <span>{t.fetched}</span>
+              <strong>{fetchedAt}</strong>
+            </div>
+            <div className="run-card api-card">
+              <span>{t.apiStatus}</span>
+              <strong>{apiAuthentication}</strong>
+              {apiRemaining && <span>{apiRemaining}</span>}
+            </div>
           </div>
         </header>
 
@@ -431,7 +433,7 @@ function App() {
           <dl className="metric-grid">
             <div>
               <dt>{t.repository}</dt>
-              <dd>{snapshot?.repository.fullName ?? '--'}</dd>
+              <dd>{snapshot?.repository.name ?? '--'}</dd>
             </div>
             <div>
               <dt>{t.branches}</dt>
