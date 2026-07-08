@@ -14,6 +14,7 @@ import type {
   GitHubCommitResponse,
   GitHubContributorResponse,
   GitHubPullRequestResponse,
+  GitHubRateLimitStatus,
   GitHubRepositoryResponse,
 } from './githubRestClient'
 import { GitHubRestClient } from './githubRestClient'
@@ -31,6 +32,10 @@ export class GitHubApiSource implements GitSource {
 
   constructor(options: GitHubApiSourceOptions = {}) {
     this.client = options.client ?? new GitHubRestClient()
+  }
+
+  getRateLimitStatus(): GitHubRateLimitStatus | null {
+    return this.client.getRateLimitStatus()
   }
 
   async loadRepository(input: GitSourceInput): Promise<GitSourceSnapshot> {

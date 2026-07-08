@@ -95,6 +95,11 @@ describe('App GitHub token input', () => {
   it('uses the token for GitHub API requests without adding it to render input', async () => {
     const capturedHeaders: Headers[] = []
     const originalFetch = globalThis.fetch
+    const rateLimitHeaders = {
+      'x-ratelimit-limit': '5000',
+      'x-ratelimit-remaining': '4978',
+      'x-ratelimit-reset': '1783500000',
+    }
 
     globalThis.fetch = (async (input, init) => {
       capturedHeaders.push(new Headers(init?.headers))
@@ -111,7 +116,7 @@ describe('App GitHub token input', () => {
           stargazers_count: 1,
           default_branch: 'main',
           owner: { login: 'vuejs' },
-        })
+        }, 200, rateLimitHeaders)
       }
 
       if (url.endsWith('/repos/vuejs/core/branches?per_page=100')) {
@@ -123,7 +128,7 @@ describe('App GitHub token input', () => {
               url: 'https://api.github.com/repos/vuejs/core/commits/aaaaaaa1111111111111111111111111111111111',
             },
           },
-        ])
+        ], 200, rateLimitHeaders)
       }
 
       if (url.includes('/repos/vuejs/core/commits?')) {
@@ -148,7 +153,7 @@ describe('App GitHub token input', () => {
             committer: null,
             parents: [],
           },
-        ])
+        ], 200, rateLimitHeaders)
       }
 
       return jsonResponse({}, 404)
@@ -165,6 +170,28 @@ describe('App GitHub token input', () => {
         true,
       )
       expect(document.body.textContent).toContain('vuejs/core')
+      expect(document.body.textContent).toContain('GitHub API Status')
+      expect(document.body.textContent).toContain('Authenticated')
+      expect(document.body.textContent).toContain('Remaining: 4978 / 5000')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('shows a focused authentication message for invalid tokens', async () => {
+    const originalFetch = globalThis.fetch
+
+    globalThis.fetch = (async () => jsonResponse({}, 401)) as typeof fetch
+
+    try {
+      renderApp()
+      changeInputValue(getTokenInput(), 'ghp_invalid_token')
+
+      await submitRepositoryForm()
+
+      expect(document.body.textContent).toContain(
+        'Authentication failed. Please verify your GitHub Personal Access Token.',
+      )
     } finally {
       globalThis.fetch = originalFetch
     }
@@ -205,11 +232,12 @@ async function submitRepositoryForm() {
   })
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json',
+      ...headers,
     },
   })
 }

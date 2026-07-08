@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import './App.css'
 import { RenderPipeline } from './pipeline'
 import { GitHubApiSource, GitHubRestClient, GitSourceError, parseRepositoryInput } from './source'
-import type { GitSourceErrorCode, GitSourceSnapshot } from './source'
+import type { GitHubRateLimitStatus, GitSourceErrorCode, GitSourceSnapshot } from './source'
 import { formatSourceError } from './ui/sourceErrorMessages'
 import type { SourceErrorMessages } from './ui/sourceErrorMessages'
 
@@ -21,6 +21,11 @@ interface Translation {
   title: string
   fetched: string
   notLoaded: string
+  apiStatus: string
+  authenticated: string
+  anonymous: string
+  remaining: string
+  unknownRateLimit: string
   repositoryControls: string
   repository: string
   githubToken: string
@@ -73,6 +78,11 @@ const translations = {
     title: 'Branch graph viewer',
     fetched: 'Fetched',
     notLoaded: 'Not loaded',
+    apiStatus: 'GitHub API Status',
+    authenticated: 'Authenticated',
+    anonymous: 'Anonymous',
+    remaining: 'Remaining',
+    unknownRateLimit: 'Unknown',
     repositoryControls: 'Repository controls',
     repository: 'Repository',
     githubToken: 'GitHub Token (Optional)',
@@ -103,10 +113,10 @@ const translations = {
     useLightTheme: 'Switch to light mode',
     errorMessages: {
       'not-found': 'Repository was not found or is not public.',
-      'rate-limited': 'GitHub API rate limit exceeded. Please try again later.',
+      'rate-limited': 'GitHub API rate limit exceeded. Configure a Personal Access Token or try again later.',
       'network-error': 'Network request failed. Please check your connection.',
       'unsupported-source': 'This source is not supported yet.',
-      'bad-credentials': 'GitHub Token is invalid. Please verify your Personal Access Token.',
+      'bad-credentials': 'Authentication failed. Please verify your GitHub Personal Access Token.',
       unknown: 'Repository could not be loaded.',
     },
   },
@@ -124,6 +134,11 @@ const translations = {
     title: '分支图查看器',
     fetched: '获取时间',
     notLoaded: '尚未加载',
+    apiStatus: 'GitHub API 状态',
+    authenticated: '已认证',
+    anonymous: '匿名',
+    remaining: '剩余',
+    unknownRateLimit: '未知',
     repositoryControls: '仓库控制',
     repository: '仓库',
     githubToken: 'GitHub Token（可选）',
@@ -154,7 +169,7 @@ const translations = {
     useLightTheme: '切换到亮色模式',
     errorMessages: {
       'not-found': '仓库不存在，或该仓库不是公开仓库。',
-      'rate-limited': 'GitHub API 请求次数已用完，请稍后再试。',
+      'rate-limited': 'GitHub API 已达到限额，可配置 Personal Access Token 后重试。',
       'network-error': '网络请求失败，请检查网络连接。',
       'unsupported-source': '当前还不支持该数据源。',
       'bad-credentials': 'GitHub Token 无效，请检查后重试。',
@@ -175,6 +190,11 @@ const translations = {
     title: 'ブランチグラフビューア',
     fetched: '取得日時',
     notLoaded: '未読み込み',
+    apiStatus: 'GitHub API ステータス',
+    authenticated: '認証済み',
+    anonymous: '匿名',
+    remaining: '残り',
+    unknownRateLimit: '不明',
     repositoryControls: 'リポジトリ操作',
     repository: 'リポジトリ',
     githubToken: 'GitHub Token（任意）',
@@ -205,7 +225,7 @@ const translations = {
     useLightTheme: 'ライトモードに切り替え',
     errorMessages: {
       'not-found': 'リポジトリが見つからないか、公開リポジトリではありません。',
-      'rate-limited': 'GitHub API のレート制限に達しました。しばらくしてから再試行してください。',
+      'rate-limited': 'GitHub API のレート制限に達しました。Personal Access Token を設定して再試行してください。',
       'network-error': 'ネットワーク要求に失敗しました。接続を確認してください。',
       'unsupported-source': 'このデータソースはまだサポートされていません。',
       'bad-credentials': 'GitHub Token が無効です。確認してから再試行してください。',
@@ -222,6 +242,7 @@ function App() {
   const [branchInput, setBranchInput] = useState('main')
   const [snapshot, setSnapshot] = useState<GitSourceSnapshot | null>(null)
   const [svg, setSvg] = useState<string | null>(null)
+  const [rateLimitStatus, setRateLimitStatus] = useState<GitHubRateLimitStatus | null>(null)
   const [errorCode, setErrorCode] = useState<GitSourceErrorCode | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const t = translations[language]
@@ -229,6 +250,14 @@ function App() {
   const latestCommit = snapshot?.commits[0]
   const selectedBranch = snapshot?.branches[0]
   const errorMessage = errorCode ? formatSourceError(errorCode, t.errorMessages) : null
+  const apiAuthentication = rateLimitStatus
+    ? rateLimitStatus.authentication === 'authenticated'
+      ? t.authenticated
+      : t.anonymous
+    : t.unknownRateLimit
+  const apiRemaining = rateLimitStatus && rateLimitStatus.remaining !== null && rateLimitStatus.limit !== null
+      ? `${t.remaining}: ${rateLimitStatus.remaining} / ${rateLimitStatus.limit}`
+      : null
   const fetchedAt = snapshot
     ? new Intl.DateTimeFormat(language, {
         dateStyle: 'medium',
@@ -262,15 +291,17 @@ function App() {
     setErrorCode(null)
     setSnapshot(null)
     setSvg(null)
+    setRateLimitStatus(null)
+
+    let source: GitHubApiSource | null = null
 
     try {
-      const pipeline = new RenderPipeline({
-        source: new GitHubApiSource({
-          client: new GitHubRestClient({
-            token: githubToken,
-          }),
+      source = new GitHubApiSource({
+        client: new GitHubRestClient({
+          token: githubToken,
         }),
       })
+      const pipeline = new RenderPipeline({ source })
       const repository = parseRepositoryInput(repositoryInput)
       const result = await pipeline.render({
         ...repository,
@@ -284,7 +315,10 @@ function App() {
 
       setSnapshot(result.snapshot)
       setSvg(result.svg)
+      setRateLimitStatus(source.getRateLimitStatus())
     } catch (caughtError) {
+      setRateLimitStatus(source?.getRateLimitStatus() ?? null)
+
       if (caughtError instanceof GitSourceError) {
         setErrorCode(caughtError.code)
       } else {
@@ -340,6 +374,11 @@ function App() {
           <div className="run-card">
             <span>{t.fetched}</span>
             <strong>{fetchedAt}</strong>
+          </div>
+          <div className="run-card api-card">
+            <span>{t.apiStatus}</span>
+            <strong>{apiAuthentication}</strong>
+            {apiRemaining && <span>{apiRemaining}</span>}
           </div>
         </header>
 

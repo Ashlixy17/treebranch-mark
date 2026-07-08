@@ -81,9 +81,17 @@ export interface GitHubRestClientOptions {
   token?: string
 }
 
+export interface GitHubRateLimitStatus {
+  authentication: 'anonymous' | 'authenticated'
+  limit: number | null
+  remaining: number | null
+  resetAt: string | null
+}
+
 export class GitHubRestClient {
   private readonly fetcher: typeof fetch
   private readonly token: string | null
+  private rateLimitStatus: GitHubRateLimitStatus | null = null
 
   constructor(options: GitHubRestClientOptions = {}) {
     this.fetcher = options.fetcher ?? ((input, init) => globalThis.fetch(input, init))
@@ -120,6 +128,10 @@ export class GitHubRestClient {
     return this.get(`/repos/${owner}/${repo}/pulls?state=closed&per_page=100`)
   }
 
+  getRateLimitStatus(): GitHubRateLimitStatus | null {
+    return this.rateLimitStatus
+  }
+
   private async get<T>(path: string): Promise<T> {
     let response: Response
     const headers: Record<string, string> = {
@@ -141,6 +153,8 @@ export class GitHubRestClient {
         error instanceof Error ? error.message : 'Network request failed.',
       )
     }
+
+    this.rateLimitStatus = readRateLimitStatus(response.headers, this.token !== null)
 
     if (!response.ok) {
       throw mapGitHubResponseError(response)
@@ -164,14 +178,7 @@ function mapGitHubResponseError(response: Response): GitSourceError {
   }
 
   if (response.status === 403) {
-    const remaining = response.headers.get('x-ratelimit-remaining')
-    const code = remaining === '0' ? 'rate-limited' : 'unknown'
-    const message =
-      code === 'rate-limited'
-        ? 'GitHub API rate limit exceeded.'
-        : 'GitHub API request was forbidden.'
-
-    return new GitSourceError(code, message, 403)
+    return new GitSourceError('rate-limited', 'GitHub API rate limit exceeded.', 403)
   }
 
   return new GitSourceError('unknown', `GitHub API request failed with ${response.status}.`, response.status)
@@ -180,4 +187,24 @@ function mapGitHubResponseError(response: Response): GitSourceError {
 function normalizeToken(token: string | undefined): string | null {
   const trimmed = token?.trim()
   return trimmed ? trimmed : null
+}
+
+function readRateLimitStatus(headers: Headers, authenticated: boolean): GitHubRateLimitStatus {
+  const reset = parseHeaderNumber(headers.get('x-ratelimit-reset'))
+
+  return {
+    authentication: authenticated ? 'authenticated' : 'anonymous',
+    limit: parseHeaderNumber(headers.get('x-ratelimit-limit')),
+    remaining: parseHeaderNumber(headers.get('x-ratelimit-remaining')),
+    resetAt: reset === null ? null : new Date(reset * 1000).toISOString(),
+  }
+}
+
+function parseHeaderNumber(value: string | null): number | null {
+  if (value === null) {
+    return null
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
 }

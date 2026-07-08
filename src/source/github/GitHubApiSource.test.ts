@@ -234,6 +234,17 @@ describe('GitHubRestClient errors', () => {
     })
   })
 
+  it('maps 403 responses without rate limit headers to rate-limited source errors', async () => {
+    const client = new GitHubRestClient({
+      fetcher: async () => new Response('{}', { status: 403 }),
+    })
+
+    await expect(client.getRepository('octo', 'repo')).rejects.toMatchObject({
+      code: 'rate-limited',
+      status: 403,
+    })
+  })
+
   it('maps 401 responses to bad-credentials source errors', async () => {
     const client = new GitHubRestClient({
       fetcher: async () => new Response('{}', { status: 401 }),
@@ -242,6 +253,53 @@ describe('GitHubRestClient errors', () => {
     await expect(client.getRepository('octo', 'repo')).rejects.toMatchObject({
       code: 'bad-credentials',
       status: 401,
+    })
+  })
+
+  it('captures GitHub rate limit response headers for anonymous requests', async () => {
+    const reset = 1783500000
+    const client = new GitHubRestClient({
+      fetcher: async () =>
+        new Response(JSON.stringify(repositoryFixture), {
+          status: 200,
+          headers: {
+            'x-ratelimit-limit': '60',
+            'x-ratelimit-remaining': '12',
+            'x-ratelimit-reset': String(reset),
+          },
+        }),
+    })
+
+    await client.getRepository('octo', 'repo')
+
+    expect(client.getRateLimitStatus()).toEqual({
+      authentication: 'anonymous',
+      limit: 60,
+      remaining: 12,
+      resetAt: new Date(reset * 1000).toISOString(),
+    })
+  })
+
+  it('marks rate limit status as authenticated when token exists', async () => {
+    const client = new GitHubRestClient({
+      token: 'ghp_test_token',
+      fetcher: async () =>
+        new Response(JSON.stringify(repositoryFixture), {
+          status: 200,
+          headers: {
+            'x-ratelimit-limit': '5000',
+            'x-ratelimit-remaining': '4978',
+            'x-ratelimit-reset': '1783500000',
+          },
+        }),
+    })
+
+    await client.getRepository('octo', 'repo')
+
+    expect(client.getRateLimitStatus()).toMatchObject({
+      authentication: 'authenticated',
+      limit: 5000,
+      remaining: 4978,
     })
   })
 
