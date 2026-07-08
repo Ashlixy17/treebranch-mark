@@ -65,6 +65,21 @@ describe('RenderPipeline', () => {
       code: 'rate-limited',
     })
   })
+
+  it('does not require token on render input', async () => {
+    const source = new FakeSource(snapshotFixture())
+    const pipeline = new RenderPipeline({ source })
+
+    await pipeline.render({
+      owner: 'example',
+      repo: 'project',
+    })
+
+    expect(source.lastInput).toEqual({
+      owner: 'example',
+      repo: 'project',
+    })
+  })
 })
 
 class FakeSource implements GitSource {

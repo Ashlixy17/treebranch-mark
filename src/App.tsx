@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
 import { RenderPipeline } from './pipeline'
-import { GitHubApiSource, GitSourceError, parseRepositoryInput } from './source'
+import { GitHubApiSource, GitHubRestClient, GitSourceError, parseRepositoryInput } from './source'
 import type { GitSourceErrorCode, GitSourceSnapshot } from './source'
 import { formatSourceError } from './ui/sourceErrorMessages'
 import type { SourceErrorMessages } from './ui/sourceErrorMessages'
@@ -265,7 +265,11 @@ function App() {
 
     try {
       const pipeline = new RenderPipeline({
-        source: new GitHubApiSource(),
+        source: new GitHubApiSource({
+          client: new GitHubRestClient({
+            token: githubToken,
+          }),
+        }),
       })
       const repository = parseRepositoryInput(repositoryInput)
       const result = await pipeline.render({

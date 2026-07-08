@@ -92,6 +92,84 @@ describe('App GitHub token input', () => {
       Node.DOCUMENT_POSITION_FOLLOWING,
     )
   })
+
+  it('uses the token for GitHub API requests without adding it to render input', async () => {
+    const capturedHeaders: Headers[] = []
+    const originalFetch = globalThis.fetch
+
+    globalThis.fetch = (async (input, init) => {
+      capturedHeaders.push(new Headers(init?.headers))
+
+      const url = String(input)
+
+      if (url.endsWith('/repos/vuejs/core')) {
+        return jsonResponse({
+          id: 1,
+          name: 'core',
+          full_name: 'vuejs/core',
+          html_url: 'https://github.com/vuejs/core',
+          description: null,
+          stargazers_count: 1,
+          default_branch: 'main',
+          owner: { login: 'vuejs' },
+        })
+      }
+
+      if (url.endsWith('/repos/vuejs/core/branches?per_page=100')) {
+        return jsonResponse([
+          {
+            name: 'main',
+            commit: {
+              sha: 'aaaaaaa1111111111111111111111111111111111',
+              url: 'https://api.github.com/repos/vuejs/core/commits/aaaaaaa1111111111111111111111111111111111',
+            },
+          },
+        ])
+      }
+
+      if (url.includes('/repos/vuejs/core/commits?')) {
+        return jsonResponse([
+          {
+            sha: 'aaaaaaa1111111111111111111111111111111111',
+            html_url: 'https://github.com/vuejs/core/commit/aaaaaaa1111111111111111111111111111111111',
+            commit: {
+              message: 'Initial commit',
+              author: {
+                name: 'Mona',
+                email: 'mona@example.com',
+                date: '2026-01-01T00:00:00Z',
+              },
+              committer: {
+                name: 'Mona',
+                email: 'mona@example.com',
+                date: '2026-01-01T00:00:00Z',
+              },
+            },
+            author: null,
+            committer: null,
+            parents: [],
+          },
+        ])
+      }
+
+      return jsonResponse({}, 404)
+    }) as typeof fetch
+
+    try {
+      renderApp()
+      changeInputValue(getTokenInput(), 'ghp_submit_token')
+
+      await submitRepositoryForm()
+
+      expect(capturedHeaders.length).toBeGreaterThan(0)
+      expect(capturedHeaders.every((headers) => headers.get('authorization') === 'Bearer ghp_submit_token')).toBe(
+        true,
+      )
+      expect(document.body.textContent).toContain('vuejs/core')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
 })
 
 function renderApp() {
@@ -115,6 +193,25 @@ function changeInputValue(input: HTMLInputElement, value: string) {
   act(() => {
     valueSetter?.call(input, value)
     input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+
+async function submitRepositoryForm() {
+  const form = document.querySelector<HTMLFormElement>('.repo-form')
+
+  expect(form).not.toBeNull()
+
+  await act(async () => {
+    form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+    },
   })
 }
 
