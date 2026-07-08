@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
 import { RenderPipeline } from './pipeline'
@@ -10,6 +10,7 @@ import type { SourceErrorMessages } from './ui/sourceErrorMessages'
 type Language = 'en' | 'zh-CN' | 'ja'
 type StatusKey = 'idle' | 'loading' | 'error' | 'ready'
 type Theme = 'light' | 'dark'
+const TOKEN_STORAGE_KEY = 'treebranch.github.token'
 
 interface Translation {
   application: string
@@ -22,6 +23,8 @@ interface Translation {
   notLoaded: string
   repositoryControls: string
   repository: string
+  githubToken: string
+  githubTokenHint: string
   branch: string
   generateGraph: string
   requestFailed: string
@@ -72,6 +75,8 @@ const translations = {
     notLoaded: 'Not loaded',
     repositoryControls: 'Repository controls',
     repository: 'Repository',
+    githubToken: 'GitHub Token (Optional)',
+    githubTokenHint: 'Stored locally and sent only to the GitHub API.',
     branch: 'Branch',
     generateGraph: 'Generate SVG',
     requestFailed: 'Request failed',
@@ -121,6 +126,8 @@ const translations = {
     notLoaded: '尚未加载',
     repositoryControls: '仓库控制',
     repository: '仓库',
+    githubToken: 'GitHub Token（可选）',
+    githubTokenHint: '仅保存在本地，并且只会发送给 GitHub API。',
     branch: '分支',
     generateGraph: '生成 SVG',
     requestFailed: '请求失败',
@@ -170,6 +177,8 @@ const translations = {
     notLoaded: '未読み込み',
     repositoryControls: 'リポジトリ操作',
     repository: 'リポジトリ',
+    githubToken: 'GitHub Token（任意）',
+    githubTokenHint: 'ローカルに保存され、GitHub API にのみ送信されます。',
     branch: 'ブランチ',
     generateGraph: 'SVG を生成',
     requestFailed: 'リクエスト失敗',
@@ -209,6 +218,7 @@ function App() {
   const [language, setLanguage] = useState<Language>('en')
   const [theme, setTheme] = useState<Theme>('light')
   const [repositoryInput, setRepositoryInput] = useState('vuejs/core')
+  const [githubToken, setGithubToken] = useState('')
   const [branchInput, setBranchInput] = useState('main')
   const [snapshot, setSnapshot] = useState<GitSourceSnapshot | null>(null)
   const [svg, setSvg] = useState<string | null>(null)
@@ -225,6 +235,26 @@ function App() {
         timeStyle: 'short',
       }).format(new Date(snapshot.fetchedAt))
     : t.notLoaded
+
+  useEffect(() => {
+    const storedToken = window.localStorage.getItem(TOKEN_STORAGE_KEY)
+
+    if (storedToken) {
+      setGithubToken(storedToken)
+    }
+  }, [])
+
+  function handleTokenChange(value: string) {
+    setGithubToken(value)
+
+    const trimmed = value.trim()
+
+    if (trimmed) {
+      window.localStorage.setItem(TOKEN_STORAGE_KEY, trimmed)
+    } else {
+      window.localStorage.removeItem(TOKEN_STORAGE_KEY)
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -319,6 +349,18 @@ function App() {
                 onChange={(event) => setRepositoryInput(event.target.value)}
                 placeholder="owner/repo"
               />
+            </label>
+            <label className="field token-field" htmlFor="github-token">
+              <span>{t.githubToken}</span>
+              <input
+                id="github-token"
+                type="password"
+                value={githubToken}
+                onChange={(event) => handleTokenChange(event.target.value)}
+                placeholder="ghp_xxxxxxxxx"
+                autoComplete="off"
+              />
+              <small>{t.githubTokenHint}</small>
             </label>
             <label className="field branch-field" htmlFor="branch">
               <span>{t.branch}</span>

@@ -231,7 +231,7 @@ h2 {
 
 .repo-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(120px, 180px) auto;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 0.55fr) minmax(120px, 180px) auto;
   align-items: end;
   gap: 12px;
 }
@@ -239,6 +239,17 @@ h2 {
 .field {
   display: grid;
   gap: 8px;
+}
+
+.token-field {
+  min-width: min(100%, 280px);
+}
+
+.field small {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .field input {
@@ -477,6 +488,7 @@ h2 {
 .app-shell[data-theme='dark'] .topbar-meta,
 .app-shell[data-theme='dark'] .run-card span,
 .app-shell[data-theme='dark'] .field span,
+.app-shell[data-theme='dark'] .field small,
 .app-shell[data-theme='dark'] .metric-grid dt,
 .app-shell[data-theme='dark'] .detail-list dt,
 .app-shell[data-theme='dark'] .json-panel span,
