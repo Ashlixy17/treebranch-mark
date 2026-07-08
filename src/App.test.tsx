@@ -5,9 +5,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import App from './App'
-
-const TOKEN_STORAGE_KEY = 'treebranch.github.token'
+import App, { GITHUB_TOKEN_STORAGE_KEY } from './App'
 
 let container: HTMLDivElement
 let root: Root | null = null
@@ -60,7 +58,8 @@ describe('App GitHub token input', () => {
   })
 
   it('restores the token from localStorage on startup', () => {
-    window.localStorage.setItem(TOKEN_STORAGE_KEY, 'ghp_saved_token')
+    expect(GITHUB_TOKEN_STORAGE_KEY).toBe('treebranch.github.token')
+    window.localStorage.setItem(GITHUB_TOKEN_STORAGE_KEY, 'ghp_saved_token')
 
     renderApp()
 
@@ -73,11 +72,11 @@ describe('App GitHub token input', () => {
     changeInputValue(getTokenInput(), '  ghp_new_token  ')
 
     expect(getTokenInput().value).toBe('  ghp_new_token  ')
-    expect(window.localStorage.getItem(TOKEN_STORAGE_KEY)).toBe('ghp_new_token')
+    expect(window.localStorage.getItem(GITHUB_TOKEN_STORAGE_KEY)).toBe('ghp_new_token')
 
     changeInputValue(getTokenInput(), '')
 
-    expect(window.localStorage.getItem(TOKEN_STORAGE_KEY)).toBeNull()
+    expect(window.localStorage.getItem(GITHUB_TOKEN_STORAGE_KEY)).toBeNull()
   })
 
   it('places the token field above the repository field', () => {

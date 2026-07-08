@@ -80,6 +80,20 @@ describe('RenderPipeline', () => {
       repo: 'project',
     })
   })
+
+  it('does not serialize github token into pipeline output models', async () => {
+    const token = 'ghp_test_token_for_leak_check'
+    const pipeline = new RenderPipeline({ source: new FakeSource(snapshotFixture()) })
+
+    const result = await pipeline.render({
+      owner: 'example',
+      repo: 'project',
+    })
+
+    expect(JSON.stringify(result.snapshot)).not.toContain(token)
+    expect(JSON.stringify(result.snapshot)).not.toContain('ghp_')
+    expect(JSON.stringify(result)).not.toContain(token)
+  })
 })
 
 class FakeSource implements GitSource {

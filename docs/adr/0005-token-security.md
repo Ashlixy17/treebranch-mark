@@ -18,6 +18,12 @@ interface GitHubRestClientOptions {
 }
 ```
 
+Token may be persisted by the browser UI only in `localStorage` under the fixed key
+`treebranch.github.token` for user convenience. This is the only permitted persistence
+location.
+
+The token must be removed from `localStorage` when the user clears the token input.
+
 Token must not enter:
 
 - `GitSourceInput`
@@ -32,7 +38,6 @@ Token must not enter:
 - Snapshot JSON output
 - README examples
 - URL parameters
-- `localStorage`
 - `sessionStorage`
 
 All token, cookie, and authentication constraints must have automated tests.

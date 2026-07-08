@@ -10,7 +10,7 @@ import type { SourceErrorMessages } from './ui/sourceErrorMessages'
 type Language = 'en' | 'zh-CN' | 'ja'
 type StatusKey = 'idle' | 'loading' | 'error' | 'ready'
 type Theme = 'light' | 'dark'
-const TOKEN_STORAGE_KEY = 'treebranch.github.token'
+export const GITHUB_TOKEN_STORAGE_KEY = 'treebranch.github.token'
 
 interface Translation {
   application: string
@@ -237,7 +237,7 @@ function App() {
     : t.notLoaded
 
   useEffect(() => {
-    const storedToken = window.localStorage.getItem(TOKEN_STORAGE_KEY)
+    const storedToken = window.localStorage.getItem(GITHUB_TOKEN_STORAGE_KEY)
 
     if (storedToken) {
       setGithubToken(storedToken)
@@ -250,9 +250,9 @@ function App() {
     const trimmed = value.trim()
 
     if (trimmed) {
-      window.localStorage.setItem(TOKEN_STORAGE_KEY, trimmed)
+      window.localStorage.setItem(GITHUB_TOKEN_STORAGE_KEY, trimmed)
     } else {
-      window.localStorage.removeItem(TOKEN_STORAGE_KEY)
+      window.localStorage.removeItem(GITHUB_TOKEN_STORAGE_KEY)
     }
   }
 
