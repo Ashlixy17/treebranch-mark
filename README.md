@@ -1,44 +1,35 @@
 # treebranch-mark
 
+![GitHub Release](https://img.shields.io/github/v/release/Ashlixy17/treebranch-mark?include_prereleases)
+
 treebranch-mark 是一个用于可视化 GitHub 项目分支演进和协作历程的 Web 工具。
 
 项目目标是把 Git 仓库历史拆成清晰的数据流水线：从数据源读取统一快照，解析 Commit DAG，构建 Branch Graph，计算 Tree Layout，转换为 Renderer 可消费的 RenderModel，并在浏览器中输出第一版 SVG。
 
 ## 当前状态
 
-当前项目处于 MVP 早期阶段，已完成：
+Treebranch Mark 正在进入 `v0.1.0-alpha` 发布收尾阶段。
 
-- React + Vite + TypeScript 项目基础结构
-- Source Layer
-- GitHub API Source
-- Git Source Snapshot 数据模型
-- Commit Parser MVP
-- Parser Review 与补充测试
-- Graph Builder MVP
-- Tree Layout MVP
-- RenderModel MVP
-- SVG Renderer MVP
-- Browser Viewer Architecture Design
-- Browser Viewer MVP
-- RenderPipeline
-- 浏览器 SVG 图预览
-- Source Snapshot 调试信息
-- 英语、简体中文、日语语言切换
-- 浅色 / 暗夜模式切换
-- 项目图标与基础品牌信息
-- 可选 GitHub Token 输入
-- GitHub API 认证状态与剩余额度提示
+当前已经具备一条完整的端到端 MVP 流程：
 
-下一阶段：
+```text
+GitHub repository -> Git snapshot -> Commit graph -> Branch graph -> Tree layout -> Render model -> SVG preview
+```
 
-- Milestone：`v0.1.0-alpha`
-- 完成可选 GitHub Token，解决匿名 API rate limit
-- 增加 Source 层 Memory Snapshot Cache
-- 建立 ADR，记录核心架构决策
-- 完成第一张可放进 README 的 Demo 截图
-- 重构 README 首页
-- 完成 Release Checklist
-- 准备 Release Notes 并打 `v0.1.0-alpha` tag
+已完成的核心能力：
+
+- 输入公开 GitHub 仓库并生成浏览器内 SVG 预览
+- 支持可选 GitHub Personal Access Token，缓解匿名 API 限流
+- 支持 GitHub API 认证状态与剩余额度提示
+- 支持英语、简体中文、日语语言切换
+- 支持浅色 / 暗夜模式切换
+- 已准备 `v0.1.0-alpha` Release Checklist 与 Release Notes
+
+发布前剩余重点：
+
+- Source 层 Memory Snapshot Cache
+- Demo 截图
+- `v0.1.0-alpha` tag 与 GitHub Release
 
 ## 架构路线
 
@@ -71,6 +62,9 @@ RenderModel
 Renderer
 SVG
 ```
+
+<details>
+<summary>展开查看分层架构细节</summary>
 
 ## Source Layer
 
@@ -486,6 +480,8 @@ Step 7 已实现：
 
 当前浏览器页面只负责 UI，不直接串联 Parser、Graph Builder、Layout、RenderModel 或 Renderer。
 
+</details>
+
 ## v0.1.0-alpha 收尾计划
 
 当前开发重心已从继续增加可视化模式，切换到第一个可发布版本的收尾。
@@ -711,6 +707,9 @@ npm run preview
 
 当前测试覆盖：
 
+<details>
+<summary>展开查看测试覆盖明细</summary>
+
 - GitHub API 响应映射
 - `options.maxCommitsPerBranch` 默认值和覆盖值
 - branch 到 `{ name, headSha }` 的映射
@@ -773,6 +772,8 @@ npm run preview
 ```bash
 npm test
 ```
+
+</details>
 
 ## 目录结构
 
@@ -851,7 +852,7 @@ src/
 - [x] GitHub Token 安全测试
 - [x] `bad-credentials` 错误映射
 - [ ] Source Memory Snapshot Cache
-- [ ] README 首页重构
+- [x] README 首页重构
 - [ ] GitHub Release `v0.1.0-alpha`
 - [ ] Theme / Animation
 - [ ] GitHub Pages / GitHub Action 部署
