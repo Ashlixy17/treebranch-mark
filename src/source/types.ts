@@ -94,6 +94,7 @@ export type GitSourceErrorCode =
   | 'rate-limited'
   | 'network-error'
   | 'unsupported-source'
+  | 'bad-credentials'
   | 'unknown'
 
 export class GitSourceError extends Error {

@@ -78,13 +78,16 @@ interface GitHubUserResponse {
 
 export interface GitHubRestClientOptions {
   fetcher?: typeof fetch
+  token?: string
 }
 
 export class GitHubRestClient {
   private readonly fetcher: typeof fetch
+  private readonly token: string | null
 
   constructor(options: GitHubRestClientOptions = {}) {
     this.fetcher = options.fetcher ?? ((input, init) => globalThis.fetch(input, init))
+    this.token = normalizeToken(options.token)
   }
 
   getRepository(owner: string, repo: string): Promise<GitHubRepositoryResponse> {
@@ -119,13 +122,18 @@ export class GitHubRestClient {
 
   private async get<T>(path: string): Promise<T> {
     let response: Response
+    const headers: Record<string, string> = {
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    }
+
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`
+    }
 
     try {
       response = await this.fetcher(`${GITHUB_API_BASE_URL}${path}`, {
-        headers: {
-          Accept: 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-        },
+        headers,
       })
     } catch (error) {
       throw new GitSourceError(
@@ -143,6 +151,14 @@ export class GitHubRestClient {
 }
 
 function mapGitHubResponseError(response: Response): GitSourceError {
+  if (response.status === 401) {
+    return new GitSourceError(
+      'bad-credentials',
+      'GitHub authentication failed. Please verify your Personal Access Token.',
+      401,
+    )
+  }
+
   if (response.status === 404) {
     return new GitSourceError('not-found', 'Repository was not found or is not public.', 404)
   }
@@ -159,4 +175,9 @@ function mapGitHubResponseError(response: Response): GitSourceError {
   }
 
   return new GitSourceError('unknown', `GitHub API request failed with ${response.status}.`, response.status)
+}
+
+function normalizeToken(token: string | undefined): string | null {
+  const trimmed = token?.trim()
+  return trimmed ? trimmed : null
 }

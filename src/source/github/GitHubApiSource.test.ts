@@ -139,6 +139,50 @@ describe('GitHubApiSource', () => {
 })
 
 describe('GitHubRestClient errors', () => {
+  it('sends an authorization header when token is provided', async () => {
+    const capturedHeaders: Headers[] = []
+    const client = new GitHubRestClient({
+      token: 'ghp_test_token',
+      fetcher: async (_input, init) => {
+        capturedHeaders.push(new Headers(init?.headers))
+        return new Response(JSON.stringify(repositoryFixture), { status: 200 })
+      },
+    })
+
+    await client.getRepository('octo', 'repo')
+
+    expect(capturedHeaders[0]?.get('authorization')).toBe('Bearer ghp_test_token')
+  })
+
+  it('does not send an authorization header when token is missing', async () => {
+    const capturedHeaders: Headers[] = []
+    const client = new GitHubRestClient({
+      fetcher: async (_input, init) => {
+        capturedHeaders.push(new Headers(init?.headers))
+        return new Response(JSON.stringify(repositoryFixture), { status: 200 })
+      },
+    })
+
+    await client.getRepository('octo', 'repo')
+
+    expect(capturedHeaders[0]?.has('authorization')).toBe(false)
+  })
+
+  it('ignores empty or whitespace tokens', async () => {
+    const capturedHeaders: Headers[] = []
+    const client = new GitHubRestClient({
+      token: '   ',
+      fetcher: async (_input, init) => {
+        capturedHeaders.push(new Headers(init?.headers))
+        return new Response(JSON.stringify(repositoryFixture), { status: 200 })
+      },
+    })
+
+    await client.getRepository('octo', 'repo')
+
+    expect(capturedHeaders[0]?.has('authorization')).toBe(false)
+  })
+
   it('calls the default browser fetch with its global binding', async () => {
     const originalFetch = globalThis.fetch
     let calledWithGlobalThis = false
@@ -187,6 +231,17 @@ describe('GitHubRestClient errors', () => {
     await expect(client.getRepository('octo', 'repo')).rejects.toMatchObject({
       code: 'rate-limited',
       status: 403,
+    })
+  })
+
+  it('maps 401 responses to bad-credentials source errors', async () => {
+    const client = new GitHubRestClient({
+      fetcher: async () => new Response('{}', { status: 401 }),
+    })
+
+    await expect(client.getRepository('octo', 'repo')).rejects.toMatchObject({
+      code: 'bad-credentials',
+      status: 401,
     })
   })
 
