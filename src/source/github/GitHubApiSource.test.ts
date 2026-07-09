@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { MemoryCache } from '../cache'
+import type { GitSourceSnapshot } from '../types'
 import { GitSourceError } from '../types'
 import { GitHubApiSource } from './GitHubApiSource'
 import { GitHubRestClient } from './githubRestClient'
@@ -13,7 +15,7 @@ import type {
 describe('GitHubApiSource', () => {
   it('maps GitHub responses into a source snapshot', async () => {
     const client = createClient()
-    const source = new GitHubApiSource({ client })
+    const source = createSource(client)
 
     const snapshot = await source.loadRepository({
       owner: 'octo',
@@ -81,7 +83,7 @@ describe('GitHubApiSource', () => {
 
   it('uses the default max commit count when the option is omitted', async () => {
     const client = createClient()
-    const source = new GitHubApiSource({ client })
+    const source = createSource(client)
 
     await source.loadRepository({ owner: 'octo', repo: 'repo' })
 
@@ -90,7 +92,7 @@ describe('GitHubApiSource', () => {
 
   it('can load a single requested branch', async () => {
     const client = createClient()
-    const source = new GitHubApiSource({ client })
+    const source = createSource(client)
 
     const snapshot = await source.loadRepository({
       owner: 'octo',
@@ -109,7 +111,7 @@ describe('GitHubApiSource', () => {
         feature: [commitFixture({ sha: 'shared' })],
       },
     })
-    const source = new GitHubApiSource({ client })
+    const source = createSource(client)
 
     const snapshot = await source.loadRepository({ owner: 'octo', repo: 'repo' })
 
@@ -120,7 +122,7 @@ describe('GitHubApiSource', () => {
 
   it('can skip contributors and pull requests through options', async () => {
     const client = createClient()
-    const source = new GitHubApiSource({ client })
+    const source = createSource(client)
 
     const snapshot = await source.loadRepository({
       owner: 'octo',
@@ -135,6 +137,96 @@ describe('GitHubApiSource', () => {
     expect(snapshot.pullRequests).toEqual([])
     expect(client.contributorsLoaded).toBe(false)
     expect(client.pullRequestsLoaded).toBe(false)
+  })
+
+  it('reuses a cached snapshot for the same query', async () => {
+    const client = createClient()
+    const source = createSource(client)
+    const input = { owner: 'octo', repo: 'repo' }
+
+    const first = await source.loadRepository(input)
+    const second = await source.loadRepository(input)
+
+    expect(second).toBe(first)
+    expect(client.loadedBranches).toEqual(['main', 'feature'])
+  })
+
+  it('requests a fresh snapshot after the cache TTL expires', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-09T00:00:00Z'))
+    const client = createClient()
+    const source = new GitHubApiSource({
+      client,
+      cache: new MemoryCache<GitSourceSnapshot>(),
+      cacheTtlMs: 10,
+    })
+
+    const first = await source.loadRepository({ owner: 'octo', repo: 'repo' })
+    vi.advanceTimersByTime(10)
+    const second = await source.loadRepository({ owner: 'octo', repo: 'repo' })
+
+    expect(second).not.toBe(first)
+    expect(client.loadedBranches).toEqual(['main', 'feature', 'main', 'feature'])
+    vi.useRealTimers()
+  })
+
+  it('does not share snapshots between different query keys', async () => {
+    const client = createClient()
+    const source = createSource(client)
+
+    await source.loadRepository({ owner: 'octo', repo: 'repo', branch: 'main' })
+    await source.loadRepository({ owner: 'octo', repo: 'repo', branch: 'feature' })
+
+    expect(client.loadedBranches).toEqual(['main', 'feature'])
+  })
+
+  it('shares cached snapshots across clients because authentication is not in the key', async () => {
+    const cache = new MemoryCache<GitSourceSnapshot>()
+    const firstClient = createClient()
+    const secondClient = createClient()
+    const firstSource = new GitHubApiSource({ client: firstClient, cache })
+    const secondSource = new GitHubApiSource({ client: secondClient, cache })
+
+    const first = await firstSource.loadRepository({ owner: 'octo', repo: 'repo' })
+    const second = await secondSource.loadRepository({ owner: 'octo', repo: 'repo' })
+
+    expect(second).toBe(first)
+    expect(firstClient.loadedBranches).toEqual(['main', 'feature'])
+    expect(secondClient.loadedBranches).toEqual([])
+  })
+
+  it('isolates the default memory cache between source instances', async () => {
+    const firstClient = createClient()
+    const secondClient = createClient()
+    const firstSource = new GitHubApiSource({ client: firstClient })
+    const secondSource = new GitHubApiSource({ client: secondClient })
+    const input = {
+      owner: 'default-cache-owner',
+      repo: 'default-cache-repository',
+    }
+
+    const first = await firstSource.loadRepository(input)
+    const second = await secondSource.loadRepository(input)
+
+    expect(second).not.toBe(first)
+    expect(firstClient.loadedBranches).toEqual(['main', 'feature'])
+    expect(secondClient.loadedBranches).toEqual(['main', 'feature'])
+  })
+
+  it('does not cache failed repository loads', async () => {
+    const client = new FlakyGitHubRestClient()
+    const source = createSource(client)
+
+    await expect(source.loadRepository({ owner: 'octo', repo: 'repo' })).rejects.toMatchObject({
+      code: 'network-error',
+    })
+    await expect(
+      source.loadRepository({ owner: 'octo', repo: 'repo' }),
+    ).resolves.toMatchObject({
+      repository: { fullName: 'octo/repo' },
+    })
+
+    expect(client.repositoryRequests).toBe(2)
   })
 })
 
@@ -367,8 +459,29 @@ class FakeGitHubRestClient extends GitHubRestClient {
   }
 }
 
+class FlakyGitHubRestClient extends FakeGitHubRestClient {
+  repositoryRequests = 0
+
+  override getRepository(): Promise<GitHubRepositoryResponse> {
+    this.repositoryRequests += 1
+
+    if (this.repositoryRequests === 1) {
+      return Promise.reject(new GitSourceError('network-error', 'offline'))
+    }
+
+    return super.getRepository()
+  }
+}
+
 function createClient(options?: FakeClientOptions): FakeGitHubRestClient {
   return new FakeGitHubRestClient(options)
+}
+
+function createSource(client: GitHubRestClient): GitHubApiSource {
+  return new GitHubApiSource({
+    client,
+    cache: new MemoryCache<GitSourceSnapshot>(),
+  })
 }
 
 const repositoryFixture: GitHubRepositoryResponse = {

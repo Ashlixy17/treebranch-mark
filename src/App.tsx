@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
 import { RenderPipeline } from './pipeline'
-import { GitHubApiSource, GitHubRestClient, GitSourceError, parseRepositoryInput } from './source'
+import {
+  GitHubApiSource,
+  GitHubRestClient,
+  GitSourceError,
+  MemoryCache,
+  parseRepositoryInput,
+} from './source'
 import type { GitHubRateLimitStatus, GitSourceErrorCode, GitSourceSnapshot } from './source'
 import { formatSourceError } from './ui/sourceErrorMessages'
 import type { SourceErrorMessages } from './ui/sourceErrorMessages'
@@ -245,6 +251,7 @@ function App() {
   const [rateLimitStatus, setRateLimitStatus] = useState<GitHubRateLimitStatus | null>(null)
   const [errorCode, setErrorCode] = useState<GitSourceErrorCode | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [snapshotCache] = useState(() => new MemoryCache<GitSourceSnapshot>())
   const t = translations[language]
   const statusKey: StatusKey = isLoading ? 'loading' : errorCode ? 'error' : snapshot ? 'ready' : 'idle'
   const latestCommit = snapshot?.commits[0]
@@ -300,6 +307,7 @@ function App() {
         client: new GitHubRestClient({
           token: githubToken,
         }),
+        cache: snapshotCache,
       })
       const pipeline = new RenderPipeline({ source })
       const repository = parseRepositoryInput(repositoryInput)

@@ -851,14 +851,14 @@ src/
 - [x] GitHub Token 支持
 - [x] GitHub Token 安全测试
 - [x] `bad-credentials` 错误映射
-- [ ] Source Memory Snapshot Cache
+- [x] Source Memory Snapshot Cache
 - [x] README 首页重构
 - [ ] GitHub Release `v0.1.0-alpha`
 - [ ] Theme / Animation
 - [ ] GitHub Pages / GitHub Action 部署
 - [ ] GitLab Source
 - [ ] Local Git Source
-- [ ] Snapshot 缓存
+- [x] Snapshot 缓存
 - [ ] SVG/PNG 导出
 - [ ] VSCode Plugin
 

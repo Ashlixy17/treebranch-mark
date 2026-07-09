@@ -17,10 +17,7 @@ export interface GitSourceOptions {
   includePullRequests?: boolean
   includeContributors?: boolean
   includeTags?: boolean
-  cache?: GitSourceCacheMode
 }
-
-export type GitSourceCacheMode = 'default' | 'reload' | 'no-store'
 
 export interface GitSourceSnapshot {
   source: GitSourceKind

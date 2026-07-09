@@ -9,6 +9,8 @@ import type {
   GitSourceInput,
   GitSourceSnapshot,
 } from '../types'
+import { MemoryCache, createGitHubSnapshotCacheKey } from '../cache'
+import type { SourceCache } from '../cache'
 import type {
   GitHubBranchResponse,
   GitHubCommitResponse,
@@ -20,18 +22,25 @@ import type {
 import { GitHubRestClient } from './githubRestClient'
 
 const DEFAULT_MAX_COMMITS_PER_BRANCH = 100
+const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1_000
 
 export interface GitHubApiSourceOptions {
   client?: GitHubRestClient
+  cache?: SourceCache<GitSourceSnapshot>
+  cacheTtlMs?: number
 }
 
 export class GitHubApiSource implements GitSource {
   readonly kind = 'github-api' as const
 
   private readonly client: GitHubRestClient
+  private readonly cache: SourceCache<GitSourceSnapshot>
+  private readonly cacheTtlMs: number
 
   constructor(options: GitHubApiSourceOptions = {}) {
     this.client = options.client ?? new GitHubRestClient()
+    this.cache = options.cache ?? new MemoryCache<GitSourceSnapshot>()
+    this.cacheTtlMs = options.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS
   }
 
   getRateLimitStatus(): GitHubRateLimitStatus | null {
@@ -39,6 +48,13 @@ export class GitHubApiSource implements GitSource {
   }
 
   async loadRepository(input: GitSourceInput): Promise<GitSourceSnapshot> {
+    const cacheKey = createGitHubSnapshotCacheKey(input)
+    const cachedSnapshot = this.cache.get(cacheKey)
+
+    if (cachedSnapshot) {
+      return cachedSnapshot
+    }
+
     const maxCommitsPerBranch =
       input.options?.maxCommitsPerBranch ?? DEFAULT_MAX_COMMITS_PER_BRANCH
     const repository = await this.client.getRepository(input.owner, input.repo)
@@ -59,7 +75,7 @@ export class GitHubApiSource implements GitSource {
       ? []
       : await this.client.listClosedPullRequests(input.owner, input.repo)
 
-    return {
+    const snapshot: GitSourceSnapshot = {
       source: this.kind,
       repository: normalizeRepository(repository),
       branches: selectedBranches.map((branch) =>
@@ -72,6 +88,10 @@ export class GitHubApiSource implements GitSource {
         .map(normalizePullRequest),
       fetchedAt: new Date().toISOString(),
     }
+
+    this.cache.set(cacheKey, snapshot, this.cacheTtlMs)
+
+    return snapshot
   }
 }
 

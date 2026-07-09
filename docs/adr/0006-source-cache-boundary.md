@@ -30,7 +30,7 @@ Suggested interface:
 ```ts
 interface SourceCache<TValue> {
   get(key: string): TValue | undefined
-  set(key: string, value: TValue): void
+  set(key: string, value: TValue, ttlMs: number): void
   clear(): void
 }
 ```
