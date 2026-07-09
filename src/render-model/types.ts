@@ -17,6 +17,7 @@ export interface RenderNode {
   label: string
   kind: RenderNodeKind
   styleToken: RenderNodeStyleToken
+  avatarUrl: string | null
 }
 
 export interface RenderEdge {

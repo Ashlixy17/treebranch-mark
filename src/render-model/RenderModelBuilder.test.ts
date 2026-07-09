@@ -34,8 +34,24 @@ describe('RenderModelBuilder', () => {
         label: 'abcdef1',
         kind: 'commit',
         styleToken: 'commit',
+        avatarUrl: null,
       },
     ])
+  })
+
+  it('maps commit author avatars to render nodes', () => {
+    const builder = new RenderModelBuilder()
+    const layout: LayoutResult = {
+      nodes: [{ id: 'avatar1234567890', x: 120, y: 100 }],
+      edges: [],
+    }
+    const graph = graphFixture([
+      commitNodeFixture('avatar1234567890', 'https://avatars.githubusercontent.com/u/1'),
+    ])
+
+    expect(builder.build(layout, graph).nodes[0]?.avatarUrl).toBe(
+      'https://avatars.githubusercontent.com/u/1',
+    )
   })
 
   it('maps layout edges to commit-edge render edges', () => {
@@ -63,7 +79,10 @@ describe('RenderModelBuilder', () => {
     }
     const graph: BranchGraph = { branches: new Map() }
 
-    expect(builder.build(layout, graph).nodes[0]?.label).toBe('unknown')
+    const renderNode = builder.build(layout, graph).nodes[0]
+
+    expect(renderNode?.label).toBe('unknown')
+    expect(renderNode?.avatarUrl).toBeNull()
   })
 
   it('returns JSON serializable plain data', () => {
@@ -107,6 +126,7 @@ describe('RenderModelBuilder', () => {
     const renderModel = builder.build(layout, graph)
 
     expect(Object.keys(renderModel.nodes[0] ?? {}).sort()).toEqual([
+      'avatarUrl',
       'id',
       'kind',
       'label',
@@ -154,15 +174,15 @@ function branchNodeFixture(name: string, head: CommitNode, isDefault = false): B
   }
 }
 
-function commitNodeFixture(sha: string): CommitNode {
+function commitNodeFixture(sha: string, avatarUrl: string | null = null): CommitNode {
   return {
-    commit: commitFixture(sha),
+    commit: commitFixture(sha, avatarUrl),
     parents: [],
     children: [],
   }
 }
 
-function commitFixture(sha: string): GitCommit {
+function commitFixture(sha: string, avatarUrl: string | null): GitCommit {
   return {
     sha,
     parents: [],
@@ -171,7 +191,7 @@ function commitFixture(sha: string): GitCommit {
       name: 'Mona',
       email: 'mona@example.com',
       login: 'mona',
-      avatarUrl: null,
+      avatarUrl,
       profileUrl: null,
     },
     committer: {

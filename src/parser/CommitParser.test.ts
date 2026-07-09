@@ -96,6 +96,18 @@ describe('CommitParser', () => {
     ])
   })
 
+  it('preserves commit author avatar data', () => {
+    const commit = commitFixture('avatar-commit')
+    commit.author.avatarUrl = 'https://avatars.githubusercontent.com/u/1'
+    const parser = new CommitParser()
+
+    const result = parser.parse(snapshotFixture([commit]))
+
+    expect(result.graph.nodes.get('avatar-commit')?.commit.author.avatarUrl).toBe(
+      'https://avatars.githubusercontent.com/u/1',
+    )
+  })
+
   it('does not mutate the source snapshot', () => {
     const snapshot = snapshotFixture([
       commitFixture('child', ['parent']),

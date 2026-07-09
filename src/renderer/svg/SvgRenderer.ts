@@ -2,12 +2,16 @@ import type { RenderModel, RenderNode } from '../../render-model'
 import { SvgBuilder } from './SvgBuilder'
 import type { SvgRenderer as SvgRendererContract, SvgRendererOptions } from './types'
 
-const DEFAULT_PADDING = 24
+const DEFAULT_PADDING = 36
 const DEFAULT_NODE_RADIUS = 6
 const DEFAULT_EDGE_STROKE_WIDTH = 2
 const DEFAULT_FONT_SIZE = 12
 const LABEL_OFFSET = 20
 const EMPTY_VIEW_BOX_SIZE = 48
+const AVATAR_SIZE = 32
+const AVATAR_OFFSET = AVATAR_SIZE / 2
+const AVATAR_LABEL_OFFSET = 32
+const AVATAR_CLIP_ID = 'commit-avatar-clip'
 const FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
 
 export class SvgRenderer implements SvgRendererContract {
@@ -20,6 +24,19 @@ export class SvgRenderer implements SvgRendererContract {
       role: 'img',
       'aria-label': 'Git history graph',
     })
+
+    if (model.nodes.some(hasAvatar)) {
+      const clipPath = new SvgBuilder('clipPath', {
+        id: AVATAR_CLIP_ID,
+        clipPathUnits: 'objectBoundingBox',
+      }).child('circle', {
+        cx: 0.5,
+        cy: 0.5,
+        r: 0.5,
+      })
+
+      svg.childElement(new SvgBuilder('defs').childElement(clipPath))
+    }
 
     for (const edge of model.edges) {
       const from = nodesById.get(edge.from)
@@ -42,29 +59,45 @@ export class SvgRenderer implements SvgRendererContract {
     }
 
     for (const node of model.nodes) {
-      svg
-        .child('circle', {
+      if (hasAvatar(node)) {
+        svg.child('image', {
+          href: node.avatarUrl,
+          x: node.x - AVATAR_OFFSET,
+          y: node.y - AVATAR_OFFSET,
+          width: AVATAR_SIZE,
+          height: AVATAR_SIZE,
+          'clip-path': `url(#${AVATAR_CLIP_ID})`,
+          preserveAspectRatio: 'xMidYMid slice',
+        })
+      } else {
+        svg.child('circle', {
           cx: node.x,
           cy: node.y,
           r: renderOptions.nodeRadius,
           fill: 'currentColor',
         })
-        .child(
-          'text',
-          {
-            x: node.x,
-            y: node.y + LABEL_OFFSET,
-            'text-anchor': 'middle',
-            'font-family': FONT_FAMILY,
-            'font-size': renderOptions.fontSize,
-            fill: 'currentColor',
-          },
-          node.label,
-        )
+      }
+
+      svg.child(
+        'text',
+        {
+          x: node.x,
+          y: node.y + (hasAvatar(node) ? AVATAR_LABEL_OFFSET : LABEL_OFFSET),
+          'text-anchor': 'middle',
+          'font-family': FONT_FAMILY,
+          'font-size': renderOptions.fontSize,
+          fill: 'currentColor',
+        },
+        node.label,
+      )
     }
 
     return svg.build()
   }
+}
+
+function hasAvatar(node: RenderNode): node is RenderNode & { avatarUrl: string } {
+  return node.kind === 'commit' && node.avatarUrl !== null
 }
 
 function resolveOptions(options: SvgRendererOptions): Required<SvgRendererOptions> {

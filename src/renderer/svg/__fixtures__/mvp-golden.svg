@@ -1,7 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -24 168 48" role="img" aria-label="Git history graph">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-36 -36 192 72" role="img" aria-label="Git history graph">
+  <defs>
+    <clipPath id="commit-avatar-clip" clipPathUnits="objectBoundingBox">
+      <circle cx="0.5" cy="0.5" r="0.5" />
+    </clipPath>
+  </defs>
   <line x1="0" y1="0" x2="120" y2="0" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.6" />
-  <circle cx="0" cy="0" r="6" fill="currentColor" />
-  <text x="0" y="20" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="currentColor">abcdef1</text>
+  <image href="https://avatars.githubusercontent.com/u/1?v=4&amp;size=32" x="-16" y="-16" width="32" height="32" clip-path="url(#commit-avatar-clip)" preserveAspectRatio="xMidYMid slice" />
+  <text x="0" y="32" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="currentColor">abcdef1</text>
   <circle cx="120" cy="0" r="6" fill="currentColor" />
   <text x="120" y="20" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="currentColor">1234567</text>
 </svg>

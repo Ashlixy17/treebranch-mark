@@ -32,6 +32,7 @@ describe('SvgRenderer', () => {
           label: 'abcdef1',
           kind: 'commit',
           styleToken: 'commit',
+          avatarUrl: null,
         },
       ],
       edges: [],
@@ -43,6 +44,38 @@ describe('SvgRenderer', () => {
     expect(svg).toContain(
       '<text x="120" y="100" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="currentColor">abcdef1</text>',
     )
+    expect(svg).not.toContain('<image')
+  })
+
+  it('renders an avatar node as a clipped 32 pixel image with an escaped URL', () => {
+    const renderer = new SvgRenderer()
+    const model: RenderModel = {
+      nodes: [
+        nodeFixture(
+          'avatar',
+          120,
+          80,
+          'avatar',
+          'https://avatars.example/avatar?a=1&b=2',
+        ),
+      ],
+      edges: [],
+    }
+
+    const svg = renderer.render(model)
+
+    expect(svg).toContain('viewBox="84 44 72 72"')
+    expect(svg).toContain(
+      '<clipPath id="commit-avatar-clip" clipPathUnits="objectBoundingBox">',
+    )
+    expect(svg).toContain('<circle cx="0.5" cy="0.5" r="0.5" />')
+    expect(svg).toContain(
+      '<image href="https://avatars.example/avatar?a=1&amp;b=2" x="104" y="64" width="32" height="32" clip-path="url(#commit-avatar-clip)" preserveAspectRatio="xMidYMid slice" />',
+    )
+    expect(svg).toContain(
+      '<text x="120" y="112" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="currentColor">avatar</text>',
+    )
+    expect(svg).not.toContain('<circle cx="120" cy="80"')
   })
 
   it('renders a single edge as a line between node coordinates', () => {
@@ -102,7 +135,13 @@ describe('SvgRenderer', () => {
     const renderer = new SvgRenderer()
     const model: RenderModel = {
       nodes: [
-        nodeFixture('abcdef1234567890', 0, 0, 'abcdef1'),
+        nodeFixture(
+          'abcdef1234567890',
+          0,
+          0,
+          'abcdef1',
+          'https://avatars.githubusercontent.com/u/1?v=4&size=32',
+        ),
         nodeFixture('1234567890abcdef', 120, 0, '1234567'),
       ],
       edges: [{ from: 'abcdef1234567890', to: '1234567890abcdef', styleToken: 'commit-edge' }],
@@ -112,7 +151,13 @@ describe('SvgRenderer', () => {
   })
 })
 
-function nodeFixture(id: string, x: number, y: number, label = id) {
+function nodeFixture(
+  id: string,
+  x: number,
+  y: number,
+  label = id,
+  avatarUrl: string | null = null,
+) {
   return {
     id,
     x,
@@ -120,6 +165,7 @@ function nodeFixture(id: string, x: number, y: number, label = id) {
     label,
     kind: 'commit' as const,
     styleToken: 'commit' as const,
+    avatarUrl,
   }
 }
 

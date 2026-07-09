@@ -54,6 +54,7 @@ describe('GitHubApiSource', () => {
         name: 'Mona',
         email: 'mona@example.com',
         login: 'mona',
+        avatarUrl: 'https://avatars.githubusercontent.com/u/1',
       },
     })
     expect(snapshot.contributors).toEqual([

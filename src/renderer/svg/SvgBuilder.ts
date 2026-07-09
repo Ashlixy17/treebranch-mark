@@ -16,6 +16,11 @@ export class SvgBuilder {
     return this
   }
 
+  childElement(element: SvgBuilder): this {
+    this.children.push(element.build())
+    return this
+  }
+
   build(): string {
     return formatElement(this.tagName, this.attributes, this.children, true)
   }
@@ -41,7 +46,11 @@ function formatElement(
     return `${openTag} />`
   }
 
-  return [`${openTag}>`, ...children.map((child) => `  ${child}`), `</${tagName}>`].join('\n')
+  return [`${openTag}>`, ...children.map(indent), `</${tagName}>`].join('\n')
+}
+
+function indent(value: string): string {
+  return `  ${value.replaceAll('\n', '\n  ')}`
 }
 
 function formatAttributes(attributes: SvgAttributes): string {
