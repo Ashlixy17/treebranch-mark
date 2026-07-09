@@ -25,7 +25,7 @@ export class SvgRenderer implements SvgRendererContract {
       'aria-label': 'Git history graph',
     })
 
-    if (model.nodes.some(hasAvatar)) {
+    if (model.nodes.some((node) => getAvatarUrl(node) !== null)) {
       const clipPath = new SvgBuilder('clipPath', {
         id: AVATAR_CLIP_ID,
         clipPathUnits: 'objectBoundingBox',
@@ -59,9 +59,11 @@ export class SvgRenderer implements SvgRendererContract {
     }
 
     for (const node of model.nodes) {
-      if (hasAvatar(node)) {
+      const avatarUrl = getAvatarUrl(node)
+
+      if (avatarUrl) {
         svg.child('image', {
-          href: node.avatarUrl,
+          href: avatarUrl,
           x: node.x - AVATAR_OFFSET,
           y: node.y - AVATAR_OFFSET,
           width: AVATAR_SIZE,
@@ -82,7 +84,7 @@ export class SvgRenderer implements SvgRendererContract {
         'text',
         {
           x: node.x,
-          y: node.y + (hasAvatar(node) ? AVATAR_LABEL_OFFSET : LABEL_OFFSET),
+          y: node.y + (avatarUrl ? AVATAR_LABEL_OFFSET : LABEL_OFFSET),
           'text-anchor': 'middle',
           'font-family': FONT_FAMILY,
           'font-size': renderOptions.fontSize,
@@ -96,8 +98,13 @@ export class SvgRenderer implements SvgRendererContract {
   }
 }
 
-function hasAvatar(node: RenderNode): node is RenderNode & { avatarUrl: string } {
-  return node.kind === 'commit' && node.avatarUrl !== null
+function getAvatarUrl(node: RenderNode): string | null {
+  if (node.kind !== 'commit') {
+    return null
+  }
+
+  const avatarUrl = node.avatarUrl?.trim()
+  return avatarUrl ? avatarUrl : null
 }
 
 function resolveOptions(options: SvgRendererOptions): Required<SvgRendererOptions> {

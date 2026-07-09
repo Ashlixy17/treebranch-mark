@@ -15,7 +15,9 @@ export class RenderModelBuilder implements RenderModelBuilderContract {
         label: node.id.slice(0, 7),
         kind: 'commit',
         styleToken: 'commit',
-        avatarUrl: commitsBySha.get(node.id)?.commit.author.avatarUrl ?? null,
+        avatarUrl: normalizeAvatarUrl(
+          commitsBySha.get(node.id)?.commit.author.avatarUrl ?? null,
+        ),
       })),
       edges: layout.edges.map((edge) => ({
         from: edge.from,
@@ -24,6 +26,11 @@ export class RenderModelBuilder implements RenderModelBuilderContract {
       })),
     }
   }
+}
+
+function normalizeAvatarUrl(avatarUrl: string | null): string | null {
+  const normalized = avatarUrl?.trim()
+  return normalized ? normalized : null
 }
 
 function collectCommits(graph: BranchGraph) {

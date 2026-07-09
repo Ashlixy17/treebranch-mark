@@ -54,6 +54,17 @@ describe('RenderModelBuilder', () => {
     )
   })
 
+  it('normalizes an empty commit author avatar to null', () => {
+    const builder = new RenderModelBuilder()
+    const layout: LayoutResult = {
+      nodes: [{ id: 'empty-avatar', x: 120, y: 100 }],
+      edges: [],
+    }
+    const graph = graphFixture([commitNodeFixture('empty-avatar', '')])
+
+    expect(builder.build(layout, graph).nodes[0]?.avatarUrl).toBeNull()
+  })
+
   it('maps layout edges to commit-edge render edges', () => {
     const builder = new RenderModelBuilder()
     const layout: LayoutResult = {

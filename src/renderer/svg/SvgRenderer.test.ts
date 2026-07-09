@@ -78,6 +78,20 @@ describe('SvgRenderer', () => {
     expect(svg).not.toContain('<circle cx="120" cy="80"')
   })
 
+  it('falls back to a circle when the avatar URL is empty', () => {
+    const renderer = new SvgRenderer()
+    const model: RenderModel = {
+      nodes: [nodeFixture('empty-avatar', 120, 80, 'empty-a', '')],
+      edges: [],
+    }
+
+    const svg = renderer.render(model)
+
+    expect(svg).toContain('<circle cx="120" cy="80" r="6" fill="currentColor" />')
+    expect(svg).not.toContain('<image')
+    expect(svg).not.toContain('<clipPath')
+  })
+
   it('renders a single edge as a line between node coordinates', () => {
     const renderer = new SvgRenderer()
     const model: RenderModel = {
