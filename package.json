@@ -3,9 +3,18 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "bin": {
+    "treebranch": "./dist-cli/treebranch.js"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && npm run build:cli && npm run build:web && npm run verify:build-boundaries",
+    "build:web": "vite build",
+    "build:cli": "vite build --config vite.cli.config.ts",
+    "verify:build-boundaries": "node scripts/verify-build-boundaries.mjs",
     "lint": "oxlint",
     "test": "vitest run",
     "preview": "vite preview"

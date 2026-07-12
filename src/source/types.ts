@@ -1,16 +1,18 @@
 export type GitSourceKind = 'github-api' | 'local-git' | 'gitlab'
 
-export interface GitSource {
+export interface GitSource<TInput = GitSourceInput> {
   kind: GitSourceKind
-  loadRepository(input: GitSourceInput): Promise<GitSourceSnapshot>
+  loadRepository(input: TInput): Promise<GitSourceSnapshot>
 }
 
-export interface GitSourceInput {
+export interface GitHubSourceInput {
   owner: string
   repo: string
   branch?: string
   options?: GitSourceOptions
 }
+
+export type GitSourceInput = GitHubSourceInput
 
 export interface GitSourceOptions {
   maxCommitsPerBranch?: number
@@ -30,21 +32,21 @@ export interface GitSourceSnapshot {
 }
 
 export interface GitRepository {
-  id: number
-  owner: string
+  id: string
+  owner: string | null
   name: string
   fullName: string
   defaultBranch: string
-  url: string
+  url: string | null
   description: string | null
-  stars: number
+  stars: number | null
 }
 
 export interface GitBranch {
   name: string
   headSha: string
   isDefault: boolean
-  url: string
+  url: string | null
 }
 
 export interface GitCommit {
@@ -55,7 +57,7 @@ export interface GitCommit {
   committer: GitIdentity
   authoredAt: string | null
   committedAt: string | null
-  url: string
+  url: string | null
 }
 
 export interface GitIdentity {
@@ -92,6 +94,10 @@ export type GitSourceErrorCode =
   | 'network-error'
   | 'unsupported-source'
   | 'bad-credentials'
+  | 'git-not-installed'
+  | 'not-a-repository'
+  | 'permission-denied'
+  | 'git-command-failed'
   | 'unknown'
 
 export class GitSourceError extends Error {

@@ -97,7 +97,7 @@ export class GitHubApiSource implements GitSource {
 
 function normalizeRepository(repository: GitHubRepositoryResponse): GitRepository {
   return {
-    id: repository.id,
+    id: String(repository.id),
     owner: repository.owner.login,
     name: repository.name,
     fullName: repository.full_name,

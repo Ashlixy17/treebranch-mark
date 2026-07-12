@@ -10,6 +10,10 @@ describe('formatSourceError', () => {
       'network-error': '网络请求失败，请检查网络连接。',
       'unsupported-source': '当前不支持该数据源。',
       'bad-credentials': 'GitHub Token 无效。',
+      'git-not-installed': '未安装 Git。',
+      'not-a-repository': '不是 Git 仓库。',
+      'permission-denied': '没有权限。',
+      'git-command-failed': 'Git 命令失败。',
       unknown: '仓库无法加载。',
     }
 
@@ -25,6 +29,10 @@ describe('formatSourceError', () => {
       'network-error': 'Network request failed.',
       'unsupported-source': 'Unsupported source.',
       'bad-credentials': 'GitHub Token is invalid.',
+      'git-not-installed': 'Git is not installed.',
+      'not-a-repository': 'Not a Git repository.',
+      'permission-denied': 'Permission denied.',
+      'git-command-failed': 'Git command failed.',
       unknown: 'Repository could not be loaded.',
     }
 

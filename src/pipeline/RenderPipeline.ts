@@ -10,10 +10,10 @@ import type {
 } from './types'
 import type { GitSourceInput } from '../source'
 
-export class RenderPipeline implements RenderPipelineContract {
-  private readonly dependencies: Required<RenderPipelineDependencies>
+export class RenderPipeline<TInput = GitSourceInput> implements RenderPipelineContract<TInput> {
+  private readonly dependencies: Required<RenderPipelineDependencies<TInput>>
 
-  constructor(dependencies: RenderPipelineDependencies) {
+  constructor(dependencies: RenderPipelineDependencies<TInput>) {
     this.dependencies = {
       source: dependencies.source,
       parser: dependencies.parser ?? new CommitParser(),
@@ -24,7 +24,7 @@ export class RenderPipeline implements RenderPipelineContract {
     }
   }
 
-  async render(input: GitSourceInput): Promise<RenderPipelineResult> {
+  async render(input: TInput): Promise<RenderPipelineResult> {
     const snapshot = await this.dependencies.source.loadRepository(input)
     const parserResult = this.dependencies.parser.parse(snapshot)
     const graphResult = this.dependencies.graphBuilder.build(parserResult.graph, snapshot.branches)

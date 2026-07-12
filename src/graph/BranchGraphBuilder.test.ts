@@ -107,7 +107,7 @@ function snapshotFixture(commits: GitCommit[]): GitSourceSnapshot {
   return {
     source: 'github-api',
     repository: {
-      id: 1,
+      id: '1',
       owner: 'octo',
       name: 'repo',
       fullName: 'octo/repo',

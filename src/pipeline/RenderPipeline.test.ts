@@ -128,7 +128,7 @@ function snapshotFixture(overrides: Partial<GitSourceSnapshot> = {}): GitSourceS
   return {
     source: 'github-api',
     repository: {
-      id: 1,
+      id: '1',
       owner: 'example',
       name: 'project',
       fullName: 'example/project',

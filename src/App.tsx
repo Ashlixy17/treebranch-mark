@@ -123,6 +123,10 @@ const translations = {
       'network-error': 'Network request failed. Please check your connection.',
       'unsupported-source': 'This source is not supported yet.',
       'bad-credentials': 'Authentication failed. Please verify your GitHub Personal Access Token.',
+      'git-not-installed': 'Git is not installed or is not available on PATH.',
+      'not-a-repository': 'The selected path is not a Git repository.',
+      'permission-denied': 'The repository path cannot be accessed.',
+      'git-command-failed': 'Git could not read the local repository.',
       unknown: 'Repository could not be loaded.',
     },
   },
@@ -179,6 +183,10 @@ const translations = {
       'network-error': '网络请求失败，请检查网络连接。',
       'unsupported-source': '当前还不支持该数据源。',
       'bad-credentials': 'GitHub Token 无效，请检查后重试。',
+      'git-not-installed': '未安装 Git，或无法从 PATH 中找到 Git。',
+      'not-a-repository': '所选路径不是 Git 仓库。',
+      'permission-denied': '无法访问该仓库路径。',
+      'git-command-failed': 'Git 无法读取本地仓库。',
       unknown: '仓库无法加载，请检查输入后重试。',
     },
   },
@@ -235,6 +243,10 @@ const translations = {
       'network-error': 'ネットワーク要求に失敗しました。接続を確認してください。',
       'unsupported-source': 'このデータソースはまだサポートされていません。',
       'bad-credentials': 'GitHub Token が無効です。確認してから再試行してください。',
+      'git-not-installed': 'Git がインストールされていないか、PATH から見つかりません。',
+      'not-a-repository': '選択したパスは Git リポジトリではありません。',
+      'permission-denied': 'リポジトリのパスにアクセスできません。',
+      'git-command-failed': 'Git がローカルリポジトリを読み取れませんでした。',
       unknown: 'リポジトリを読み込めませんでした。入力内容を確認して再試行してください。',
     },
   },
@@ -467,14 +479,16 @@ function App() {
                 <section className="panel">
                   <div className="panel-heading">
                     <h2>{t.repository}</h2>
-                    <a href={snapshot.repository.url} target="_blank" rel="noreferrer">
-                      {t.open}
-                    </a>
+                    {snapshot.repository.url && (
+                      <a href={snapshot.repository.url} target="_blank" rel="noreferrer">
+                        {t.open}
+                      </a>
+                    )}
                   </div>
                   <dl className="detail-list">
                     <div>
                       <dt>{t.owner}</dt>
-                      <dd>{snapshot.repository.owner}</dd>
+                      <dd>{snapshot.repository.owner ?? '--'}</dd>
                     </div>
                     <div>
                       <dt>{t.defaultBranch}</dt>
@@ -482,7 +496,7 @@ function App() {
                     </div>
                     <div>
                       <dt>{t.stars}</dt>
-                      <dd>{snapshot.repository.stars}</dd>
+                      <dd>{snapshot.repository.stars ?? '--'}</dd>
                     </div>
                   </dl>
                 </section>
@@ -490,7 +504,7 @@ function App() {
                 <section className="panel">
                   <div className="panel-heading">
                     <h2>{t.branchHead}</h2>
-                    {selectedBranch && (
+                    {selectedBranch?.url && (
                       <a href={selectedBranch.url} target="_blank" rel="noreferrer">
                         {t.open}
                       </a>
