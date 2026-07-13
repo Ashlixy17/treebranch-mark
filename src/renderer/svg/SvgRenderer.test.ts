@@ -201,6 +201,23 @@ describe('SvgRenderer', () => {
 
     expect(renderer.render(model)).toContain('>2026 &lt; 2027 &amp; beyond</text>')
   })
+
+  it.each(['2026-01-31', '2026-01', 'Unknown date'])(
+    'includes the full left-anchored %s group label in the viewBox',
+    (label) => {
+      const renderer = new SvgRenderer()
+      const model: RenderModel = {
+        nodes: [nodeFixture('commit', 0, 0)],
+        edges: [],
+        groups: [{ id: label, label, startX: 0, endX: 0 }],
+      }
+
+      const svg = renderer.render(model)
+      const [minX, , width] = svg.match(/viewBox="([^"]+)"/)?.[1].split(' ').map(Number) ?? []
+
+      expect(minX + width).toBeGreaterThanOrEqual(label.length * 12 + 36)
+    },
+  )
 })
 
 function nodeFixture(

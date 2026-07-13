@@ -180,6 +180,7 @@ function getViewBox(
   const xs = [
     ...nodes.map((node) => node.x),
     ...groups.flatMap((group) => [group.startX, group.endX]),
+    ...groups.map((group) => group.startX + group.label.length * fontSize),
     ...separatorXs,
   ]
   const ys = [

@@ -46,25 +46,25 @@ function collectGroups(
   commitNodes: Map<string, CommitNode>,
   grouping: TimelineGrouping,
 ): LayoutGroup[] {
-  const groups = new Map<string, LayoutGroup>()
+  const groups: LayoutGroup[] = []
 
   for (const node of nodes) {
     const group = groupFor(commitNodes.get(node.id), grouping)
-    const existing = groups.get(group.id)
+    const existing = groups.at(-1)
 
-    if (existing) {
+    if (existing?.id === group.id) {
       existing.endX = node.x
       continue
     }
 
-    groups.set(group.id, {
+    groups.push({
       ...group,
       startX: node.x,
       endX: node.x,
     })
   }
 
-  return [...groups.values()]
+  return groups
 }
 
 function groupFor(node: CommitNode | undefined, grouping: TimelineGrouping): Pick<LayoutGroup, 'id' | 'label'> {

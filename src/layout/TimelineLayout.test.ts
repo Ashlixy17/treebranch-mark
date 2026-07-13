@@ -50,6 +50,27 @@ describe('TimelineLayout', () => {
     expect(result.nodes.map((node) => node.id)).toEqual(['january', 'february'])
     expect(result.groups.map((group) => group.label)).toEqual(['2026-01', '2026-02'])
   })
+
+  it('emits a separate group for each contiguous run with the same key', () => {
+    const invalidAfter = commitNodeFixture('invalid-after', [], 'not-a-date', 'also-not-a-date')
+    const epoch = commitNodeFixture('epoch', [invalidAfter], '1970-01-01T00:00:00.000Z')
+    const invalidBefore = commitNodeFixture('invalid-before', [epoch], 'not-a-date', 'also-not-a-date')
+    const graph = graphFixture([branchNodeFixture('main', invalidBefore, true)])
+
+    const result = new TimelineLayout({ grouping: 'day' }).layout(graph)
+
+    expect(result.nodes.map((node) => node.id)).toEqual(['invalid-before', 'epoch', 'invalid-after'])
+    expect(result.groups).toEqual([
+      { id: 'unknown-date', label: 'Unknown date', startX: 0, endX: 0 },
+      { id: '1970-01-01', label: '1970-01-01', startX: COMMIT_COLUMN_GAP, endX: COMMIT_COLUMN_GAP },
+      {
+        id: 'unknown-date',
+        label: 'Unknown date',
+        startX: COMMIT_COLUMN_GAP * 2,
+        endX: COMMIT_COLUMN_GAP * 2,
+      },
+    ])
+  })
 })
 
 function graphFixture(branches: BranchNode[]): BranchGraph {

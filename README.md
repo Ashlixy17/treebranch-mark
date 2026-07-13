@@ -31,7 +31,7 @@ vuejs/core
 
 浏览器支持可选 GitHub Personal Access Token、API 配额状态、浅色/暗夜模式，以及英语、简体中文、日语切换。
 
-Timeline is the default graph layout. In the Browser Viewer, choose UTC year, month, or day grouping in Graph settings; changing it redraws the loaded graph without another repository request.
+Timeline is the default graph layout. In the Browser Viewer, choose UTC year, month, or day grouping in the repository control panel; changing it redraws the loaded graph without another repository request.
 
 ### Local Git CLI
 

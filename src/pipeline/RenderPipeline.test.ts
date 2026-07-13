@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { Layout } from '../layout'
 import type { GitSource, GitSourceInput, GitSourceSnapshot } from '../source'
 import { GitSourceError } from '../source'
 import { RenderPipeline } from './RenderPipeline'
@@ -30,6 +31,15 @@ describe('RenderPipeline', () => {
     expect(result.svg).toContain('bbbbbbb')
   })
 
+  it('loads the repository exactly once when rendering an input', async () => {
+    const source = new FakeSource(snapshotFixture())
+    const pipeline = new RenderPipeline({ source })
+
+    await pipeline.render({ owner: 'example', repo: 'project' })
+
+    expect(source.loadCount).toBe(1)
+  })
+
   it('renders a supplied snapshot without loading the source', async () => {
     const source = new ThrowingSource(new Error('must not load'))
     const snapshot = snapshotFixture()
@@ -47,6 +57,21 @@ describe('RenderPipeline', () => {
     })
 
     expect(result.svg).toContain('2026-01')
+  })
+
+  it('uses the supplied layout override when rendering a snapshot', () => {
+    const layout: Layout = {
+      layout: () => ({
+        nodes: [],
+        edges: [],
+        groups: [{ id: 'override', label: 'Layout override', startX: 0, endX: 0 }],
+      }),
+    }
+    const pipeline = new RenderPipeline({ source: new FakeSource(snapshotFixture()) })
+
+    const result = pipeline.renderSnapshot(snapshotFixture(), { layout })
+
+    expect(result.svg).toContain('>Layout override</text>')
   })
 
   it('keeps missing branch heads as graph warnings and still returns SVG', async () => {
@@ -118,6 +143,7 @@ describe('RenderPipeline', () => {
 class FakeSource implements GitSource {
   readonly kind = 'github-api'
   lastInput: GitSourceInput | null = null
+  loadCount = 0
   private readonly snapshot: GitSourceSnapshot
 
   constructor(snapshot: GitSourceSnapshot) {
@@ -125,6 +151,7 @@ class FakeSource implements GitSource {
   }
 
   async loadRepository(input: GitSourceInput): Promise<GitSourceSnapshot> {
+    this.loadCount += 1
     this.lastInput = input
     return this.snapshot
   }
