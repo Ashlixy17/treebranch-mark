@@ -73,7 +73,7 @@ treebranch render ./my-project --branch main --max-commits 200 --output docs/bra
 - GitHub API Source：仓库、分支、Commit、贡献者和已合并 PR
 - Local Git Source：本地分支、Commit、author、committer 和时间
 - Commit DAG Parser 与 Branch Graph Builder
-- 确定性的 Tree Layout
+- 确定性的 Timeline Layout（默认）与 Tree Layout
 - Renderer-neutral RenderModel
 - standalone SVG Renderer
 - GitHub 贡献者头像节点；本地 Git 无头像时回退为圆形节点
@@ -81,7 +81,7 @@ treebranch render ./my-project --branch main --max-commits 200 --output docs/bra
 - Browser Viewer 与 Local Git CLI 共用同一个 RenderPipeline
 - Source、Pipeline、Token 和构建边界自动化测试
 
-当前版本为 `v0.2.0`。Local Git Source、共享 RenderPipeline 与 CLI MVP 已发布；Timeline、Metro、动画和 GitHub Action 尚未实现。
+当前版本基于已发布的 `v0.2.0`。Local Git Source、共享 RenderPipeline 与 CLI MVP 已发布；当前开发版本已实现 Timeline 并将其设为默认布局，Metro、动画和 GitHub Action 尚未实现。
 
 ## 架构
 
@@ -106,7 +106,8 @@ GitHubApiSource               LocalGitSource
           Branch Graph Builder
                    |
                    v
-              Tree Layout
+      Timeline Layout (default)
+          or Tree Layout
                    |
                    v
               RenderModel
@@ -187,7 +188,7 @@ const result = await pipeline.render(input)
 
 - Parser 将 Snapshot 转换为带 parents/children 的 `CommitGraph`
 - Graph Builder 从 branch head 计算每个分支的可达 Commit 集合
-- Tree Layout 只输出节点坐标和边，不包含 label、颜色或 SVG
+- Timeline Layout 是默认布局，Tree Layout 仍然可用；两者只输出节点坐标和边，不包含 label、颜色或 SVG
 
 ### RenderModel 与 Renderer
 
@@ -257,7 +258,8 @@ dist-cli/treebranch.js Node CLI
 - [x] `treebranch render` CLI MVP
 - [x] v0.2.0 Release Note 与 Release Checklist
 - [x] v0.2.0 Release
-- [ ] Timeline / Metro Layout
+- [x] Timeline Layout
+- [ ] Metro Layout
 - [ ] CLI package distribution
 - [ ] GitHub Action
 - [ ] GitLab / Gitea / Bitbucket Source
