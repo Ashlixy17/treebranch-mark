@@ -14,11 +14,27 @@ export interface LayoutEdge {
   to: string
 }
 
+export interface LayoutGroup {
+  id: string
+  label: string
+  startX: number
+  endX: number
+}
+
 export interface LayoutResult {
   nodes: LayoutNode[]
   edges: LayoutEdge[]
+  groups: LayoutGroup[]
 }
 
-export interface TreeLayout {
+export interface Layout {
   layout(branchGraph: BranchGraph): LayoutResult
 }
+
+export type TimelineGrouping = 'year' | 'month' | 'day'
+
+export interface TimelineLayoutOptions {
+  grouping?: TimelineGrouping
+}
+
+export type TreeLayout = Layout

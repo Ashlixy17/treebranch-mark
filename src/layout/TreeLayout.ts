@@ -3,12 +3,12 @@ import type { CommitNode } from '../parser'
 import {
   BRANCH_LANE_GAP,
   COMMIT_COLUMN_GAP,
+  type Layout,
   type LayoutEdge,
   type LayoutResult,
-  type TreeLayout as TreeLayoutContract,
 } from './types'
 
-export class TreeLayout implements TreeLayoutContract {
+export class TreeLayout implements Layout {
   layout(branchGraph: BranchGraph): LayoutResult {
     const branches = sortBranches([...branchGraph.branches.values()])
     const discovered = collectCommitNodes(branches)
@@ -22,6 +22,7 @@ export class TreeLayout implements TreeLayoutContract {
         y: yBySha.get(node.commit.sha) ?? 0,
       })),
       edges: collectEdges(discovered.nodes),
+      groups: [],
     }
   }
 }

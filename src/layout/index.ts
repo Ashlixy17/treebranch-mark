@@ -1,3 +1,13 @@
 export { TreeLayout } from './TreeLayout'
-export type { LayoutEdge, LayoutNode, LayoutResult, TreeLayout as TreeLayoutContract } from './types'
+export { TimelineLayout } from './TimelineLayout'
+export type {
+  Layout,
+  LayoutEdge,
+  LayoutGroup,
+  LayoutNode,
+  LayoutResult,
+  TimelineGrouping,
+  TimelineLayoutOptions,
+  TreeLayout as TreeLayoutContract,
+} from './types'
 export { BRANCH_LANE_GAP, COMMIT_COLUMN_GAP } from './types'

@@ -15,6 +15,7 @@ describe('TreeLayout', () => {
     expect(layout.layout(graph)).toEqual({
       nodes: [],
       edges: [],
+      groups: [],
     })
   })
 
