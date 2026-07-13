@@ -128,6 +128,127 @@ describe('App GitHub token input', () => {
     }
   })
 
+  it('zooms the generated SVG with controls and resets the view', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async (input) => fixtureResponseFor(input)) as typeof fetch
+
+    try {
+      renderApp()
+      await submitRepositoryForm()
+
+      const zoomIn = getButton('Zoom in SVG preview')
+      const resetZoom = getButton('Reset SVG preview zoom')
+
+      click(zoomIn)
+
+      expect(resetZoom.textContent).toBe('125%')
+      expect(getSvgPreviewContent().style.transform).toContain('scale(1.25)')
+
+      click(resetZoom)
+
+      expect(resetZoom.textContent).toBe('100%')
+      expect(getSvgPreviewContent().style.transform).toBe('translate(0px, 0px) scale(1)')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('zooms around the pointer with the mouse wheel', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async (input) => fixtureResponseFor(input)) as typeof fetch
+
+    try {
+      renderApp()
+      await submitRepositoryForm()
+
+      const preview = getSvgPreview()
+      preview.getBoundingClientRect = () => createDomRect(0, 0, 800, 400)
+      const wheelEvent = new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 200,
+        clientY: 100,
+        deltaY: -100,
+      })
+
+      act(() => {
+        preview.dispatchEvent(wheelEvent)
+      })
+
+      expect(wheelEvent.defaultPrevented).toBe(true)
+      expect(getButton('Reset SVG preview zoom').textContent).toBe('125%')
+      expect(getSvgPreviewContent().style.transform).toBe('translate(-50px, -25px) scale(1.25)')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('pans the generated SVG by dragging inside the preview', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async (input) => fixtureResponseFor(input)) as typeof fetch
+
+    try {
+      renderApp()
+      await submitRepositoryForm()
+
+      const preview = getSvgPreview()
+
+      act(() => {
+        preview.dispatchEvent(createPointerEvent('pointerdown', 100, 80))
+        preview.dispatchEvent(createPointerEvent('pointermove', 145, 110))
+      })
+
+      expect(getSvgPreviewContent().style.transform).toBe('translate(45px, 30px) scale(1)')
+      expect(preview.classList.contains('is-dragging')).toBe(true)
+
+      act(() => {
+        preview.dispatchEvent(createPointerEvent('pointerup', 145, 110))
+      })
+
+      expect(preview.classList.contains('is-dragging')).toBe(false)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('resets the SVG view when the graph is redrawn', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async (input) => fixtureResponseFor(input)) as typeof fetch
+
+    try {
+      renderApp()
+      await submitRepositoryForm()
+
+      click(getButton('Zoom in SVG preview'))
+      expect(getButton('Reset SVG preview zoom').textContent).toBe('125%')
+
+      changeSelectValue(getTimelineGrouping(), 'day')
+
+      expect(getButton('Reset SVG preview zoom').textContent).toBe('100%')
+      expect(getSvgPreviewContent().style.transform).toBe('translate(0px, 0px) scale(1)')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('keeps SVG zoom between 25% and 400%', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async (input) => fixtureResponseFor(input)) as typeof fetch
+
+    try {
+      renderApp()
+      await submitRepositoryForm()
+
+      clickTimes(getButton('Zoom in SVG preview'), 20)
+      expect(getButton('Reset SVG preview zoom').textContent).toBe('400%')
+
+      clickTimes(getButton('Zoom out SVG preview'), 20)
+      expect(getButton('Reset SVG preview zoom').textContent).toBe('25%')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
   it('renders an optional password token input', () => {
     renderApp()
 
@@ -314,6 +435,68 @@ function getRepositoryMetricValue(): string {
 
   expect(value).not.toBeNull()
   return value?.textContent ?? ''
+}
+
+function getButton(label: string): HTMLButtonElement {
+  const button = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
+    (candidate) => candidate.getAttribute('aria-label') === label,
+  )
+
+  expect(button).not.toBeUndefined()
+  return button as HTMLButtonElement
+}
+
+function getSvgPreviewContent(): HTMLDivElement {
+  const content = document.querySelector<HTMLDivElement>('.svg-preview-content')
+
+  expect(content).not.toBeNull()
+  return content as HTMLDivElement
+}
+
+function getSvgPreview(): HTMLDivElement {
+  const preview = document.querySelector<HTMLDivElement>('.svg-preview')
+
+  expect(preview).not.toBeNull()
+  return preview as HTMLDivElement
+}
+
+function createDomRect(left: number, top: number, width: number, height: number): DOMRect {
+  return {
+    x: left,
+    y: top,
+    left,
+    top,
+    right: left + width,
+    bottom: top + height,
+    width,
+    height,
+    toJSON: () => ({}),
+  }
+}
+
+function createPointerEvent(type: string, clientX: number, clientY: number): Event {
+  const event = new MouseEvent(type, {
+    bubbles: true,
+    button: 0,
+    buttons: type === 'pointerup' ? 0 : 1,
+    clientX,
+    clientY,
+  })
+
+  Object.defineProperty(event, 'pointerId', { value: 1 })
+  return event
+}
+
+function click(element: HTMLElement) {
+  act(() => {
+    element.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+}
+
+function clickTimes(element: HTMLElement, count: number) {
+  for (let index = 0; index < count; index += 1) {
+    click(element)
+  }
 }
 
 function changeInputValue(input: HTMLInputElement, value: string) {

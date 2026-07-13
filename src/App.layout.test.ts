@@ -16,4 +16,15 @@ describe('App control panel layout', () => {
       /\.repo-form button\s*{[^}]*grid-column:\s*1 \/ -1;[^}]*grid-row:\s*3;[^}]*justify-self:\s*center;/s,
     )
   })
+
+  it('keeps the interactive SVG transform inside a draggable viewport', () => {
+    expect(cssText).toMatch(
+      /\.svg-preview\s*{[^}]*overflow:\s*hidden;[^}]*position:\s*relative;[^}]*cursor:\s*grab;[^}]*touch-action:\s*none;/s,
+    )
+    expect(cssText).toMatch(/\.svg-preview\.is-dragging\s*{[^}]*cursor:\s*grabbing;/s)
+    expect(cssText).toMatch(
+      /\.svg-preview-content\s*{[^}]*width:\s*100%;[^}]*transform-origin:\s*0 0;/s,
+    )
+    expect(cssText).toMatch(/\.svg-panel \.panel-heading\s*{[^}]*flex-wrap:\s*wrap;/s)
+  })
 })

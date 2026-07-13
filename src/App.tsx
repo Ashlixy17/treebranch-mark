@@ -19,6 +19,7 @@ import type {
 } from './source'
 import { formatSourceError } from './ui/sourceErrorMessages'
 import type { SourceErrorMessages } from './ui/sourceErrorMessages'
+import { SvgPreviewPanel } from './ui/SvgPreviewPanel'
 
 type Language = 'en' | 'zh-CN' | 'ja'
 type StatusKey = 'idle' | 'loading' | 'error' | 'ready'
@@ -71,6 +72,10 @@ interface Translation {
   waitingPayload: string
   useDarkTheme: string
   useLightTheme: string
+  svgZoomControls: string
+  zoomOutSvg: string
+  zoomInSvg: string
+  resetSvgZoom: string
   errorMessages: SourceErrorMessages
 }
 
@@ -132,6 +137,10 @@ const translations = {
     waitingPayload: 'Waiting for normalized source payload.',
     useDarkTheme: 'Switch to dark mode',
     useLightTheme: 'Switch to light mode',
+    svgZoomControls: 'SVG preview controls',
+    zoomOutSvg: 'Zoom out SVG preview',
+    zoomInSvg: 'Zoom in SVG preview',
+    resetSvgZoom: 'Reset SVG preview zoom',
     errorMessages: {
       'not-found': 'Repository was not found or is not public.',
       'rate-limited': 'GitHub API rate limit exceeded. Configure a Personal Access Token or try again later.',
@@ -196,6 +205,10 @@ const translations = {
     waitingPayload: '等待标准化 Source 数据。',
     useDarkTheme: '切换到暗夜模式',
     useLightTheme: '切换到亮色模式',
+    svgZoomControls: 'SVG 预览控制',
+    zoomOutSvg: '缩小 SVG 预览',
+    zoomInSvg: '放大 SVG 预览',
+    resetSvgZoom: '重置 SVG 预览缩放',
     errorMessages: {
       'not-found': '仓库不存在，或该仓库不是公开仓库。',
       'rate-limited': 'GitHub API 已达到限额，可配置 Personal Access Token 后重试。',
@@ -260,6 +273,10 @@ const translations = {
     waitingPayload: '標準化された Source データを待っています。',
     useDarkTheme: 'ダークモードに切り替え',
     useLightTheme: 'ライトモードに切り替え',
+    svgZoomControls: 'SVG プレビュー操作',
+    zoomOutSvg: 'SVG プレビューを縮小',
+    zoomInSvg: 'SVG プレビューを拡大',
+    resetSvgZoom: 'SVG プレビューのズームをリセット',
     errorMessages: {
       'not-found': 'リポジトリが見つからないか、公開リポジトリではありません。',
       'rate-limited': 'GitHub API のレート制限に達しました。Personal Access Token を設定して再試行してください。',
@@ -587,20 +604,16 @@ function App() {
                 </section>
               </div>
 
-              <section className="svg-panel">
-                <div className="panel-heading">
-                  <h2>{t.graphPreview}</h2>
-                  <span>svg</span>
-                </div>
-                {svg ? (
-                  <div className="svg-preview" dangerouslySetInnerHTML={{ __html: svg }} />
-                ) : (
-                  <div className="svg-empty">
-                    <strong>{t.noGraph}</strong>
-                    <span>{t.waitingGraph}</span>
-                  </div>
-                )}
-              </section>
+              <SvgPreviewPanel
+                svg={svg}
+                title={t.graphPreview}
+                emptyTitle={t.noGraph}
+                emptyDescription={t.waitingGraph}
+                zoomControlsLabel={t.svgZoomControls}
+                zoomOutLabel={t.zoomOutSvg}
+                zoomInLabel={t.zoomInSvg}
+                resetZoomLabel={t.resetSvgZoom}
+              />
 
               <section className="json-panel">
                 <div className="panel-heading">
