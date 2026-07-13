@@ -188,7 +188,7 @@ const result = await pipeline.render(input)
 
 - Parser 将 Snapshot 转换为带 parents/children 的 `CommitGraph`
 - Graph Builder 从 branch head 计算每个分支的可达 Commit 集合
-- Timeline Layout 是默认布局，Tree Layout 仍然可用；两者只输出节点坐标和边，不包含 label、颜色或 SVG
+- Timeline Layout 是默认布局，Tree Layout 仍然可用；两者均输出 renderer-neutral 的节点坐标与边，Timeline 还输出包含 label 的日期分组元数据；两者都不包含样式或 SVG/DOM 细节
 
 ### RenderModel 与 Renderer
 
