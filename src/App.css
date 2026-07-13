@@ -255,8 +255,8 @@ h2 {
 
 .repo-form {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(120px, 180px) auto;
-  align-items: end;
+  grid-template-columns: minmax(280px, 1fr) minmax(120px, 180px);
+  align-items: start;
   gap: 12px;
 }
 
@@ -287,8 +287,10 @@ h2 {
 }
 
 .repo-form button {
-  grid-column: 3;
-  grid-row: 2;
+  grid-column: 1 / -1;
+  grid-row: 3;
+  justify-self: center;
+  min-width: 180px;
 }
 
 .field small {
