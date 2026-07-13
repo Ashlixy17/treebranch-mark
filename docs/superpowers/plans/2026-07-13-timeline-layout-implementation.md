@@ -181,9 +181,10 @@ git commit -m "feat: render timeline date groups"
 ```ts
 it('renders a supplied snapshot without loading the source', async () => {
   const source = new ThrowingSource(new Error('must not load'))
-  const result = await new RenderPipeline({ source }).renderSnapshot(snapshotFixture())
+  const snapshot = snapshotFixture()
+  const result = await new RenderPipeline({ source }).renderSnapshot(snapshot)
 
-  expect(result.snapshot).toBe(snapshotFixture())
+  expect(result.snapshot).toBe(snapshot)
   expect(result.svg).toContain('2026-01')
 })
 
