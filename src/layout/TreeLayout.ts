@@ -104,8 +104,19 @@ function assignXCoordinates(
 }
 
 function commitTimestamp(node: CommitNode): number {
-  const timestamp = node.commit.committedAt ?? node.commit.authoredAt ?? ''
-  return Date.parse(timestamp) || 0
+  for (const timestamp of [node.commit.committedAt, node.commit.authoredAt]) {
+    if (!timestamp) {
+      continue
+    }
+
+    const parsed = Date.parse(timestamp)
+
+    if (!Number.isNaN(parsed)) {
+      return parsed
+    }
+  }
+
+  return 0
 }
 
 function assignYCoordinates(branches: BranchNode[], nodes: Map<string, CommitNode>): Map<string, number> {

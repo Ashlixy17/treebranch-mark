@@ -39,6 +39,17 @@ describe('TimelineLayout', () => {
 
     expect(result.groups).toEqual([{ id: 'unknown-date', label: 'Unknown date', startX: 0, endX: 0 }])
   })
+
+  it('uses a valid authoredAt timestamp when committedAt is invalid', () => {
+    const january = commitNodeFixture('january', [], '2026-01-15T00:00:00Z')
+    const february = commitNodeFixture('february', [january], 'not-a-date', '2026-02-15T00:00:00Z')
+    const graph = graphFixture([branchNodeFixture('main', february, true)])
+
+    const result = new TimelineLayout({ grouping: 'month' }).layout(graph)
+
+    expect(result.nodes.map((node) => node.id)).toEqual(['january', 'february'])
+    expect(result.groups.map((group) => group.label)).toEqual(['2026-01', '2026-02'])
+  })
 })
 
 function graphFixture(branches: BranchNode[]): BranchGraph {
