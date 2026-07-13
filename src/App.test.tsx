@@ -52,6 +52,37 @@ describe('App GitHub token input', () => {
     expect(getTimelineGrouping().value).toBe('month')
   })
 
+  it('disables graph grouping while a repository is loading', async () => {
+    const originalFetch = globalThis.fetch
+    const firstResponse = createDeferred<Response>()
+    let requestCount = 0
+
+    globalThis.fetch = (async (input) => {
+      requestCount += 1
+
+      if (requestCount === 1) {
+        return firstResponse.promise
+      }
+
+      return fixtureResponseFor(input)
+    }) as typeof fetch
+
+    try {
+      renderApp()
+      startRepositoryFormSubmit()
+
+      expect(getTimelineGrouping().disabled).toBe(true)
+
+      await act(async () => {
+        firstResponse.resolve(fixtureResponseFor('https://api.github.com/repos/vuejs/core'))
+      })
+
+      expect(getTimelineGrouping().disabled).toBe(false)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
   it('translates the graph grouping setting in every supported language', () => {
     renderApp()
 
@@ -323,6 +354,16 @@ function jsonResponse(body: unknown, status = 200, headers: Record<string, strin
   })
 }
 
+function startRepositoryFormSubmit() {
+  const form = document.querySelector<HTMLFormElement>('.repo-form')
+
+  expect(form).not.toBeNull()
+
+  act(() => {
+    form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+}
+
 function fixtureResponseFor(input: RequestInfo | URL): Response {
   const url = String(input)
 
@@ -377,6 +418,18 @@ function fixtureResponseFor(input: RequestInfo | URL): Response {
   }
 
   return jsonResponse({}, 404)
+}
+
+function createDeferred<T>() {
+  let resolvePromise: (value: T) => void = () => undefined
+  const promise = new Promise<T>((resolve) => {
+    resolvePromise = resolve
+  })
+
+  return {
+    promise,
+    resolve: resolvePromise,
+  }
 }
 
 function createMemoryStorage(): Storage {

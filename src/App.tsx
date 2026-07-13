@@ -486,6 +486,7 @@ function App() {
               <select
                 id="timeline-grouping"
                 value={timelineGrouping}
+                disabled={isLoading}
                 onChange={(event) =>
                   handleTimelineGroupingChange(event.target.value as TimelineGrouping)
                 }
