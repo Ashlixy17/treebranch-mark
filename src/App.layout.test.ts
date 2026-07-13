@@ -25,6 +25,9 @@ describe('App control panel layout', () => {
     expect(cssText).toMatch(
       /\.svg-preview-content\s*{[^}]*width:\s*100%;[^}]*transform-origin:\s*0 0;/s,
     )
+    expect(cssText).toMatch(
+      /\.svg-preview\.is-wheel-zooming \.svg-preview-content\s*{[^}]*transition:\s*transform 140ms ease-out;/s,
+    )
     expect(cssText).toMatch(/\.svg-panel \.panel-heading\s*{[^}]*flex-wrap:\s*wrap;/s)
   })
 })

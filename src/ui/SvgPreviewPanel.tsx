@@ -4,6 +4,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 const MIN_SCALE = 0.25
 const MAX_SCALE = 4
 const SCALE_STEP = 0.25
+const WHEEL_TRANSITION_TIMEOUT_MS = 160
 
 interface ViewState {
   scale: number
@@ -44,13 +45,16 @@ export function SvgPreviewPanel({
 }: SvgPreviewPanelProps) {
   const previewRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
+  const wheelTransitionTimerRef = useRef<number | null>(null)
   const [view, setView] = useState<ViewState>(DEFAULT_VIEW)
   const [isDragging, setIsDragging] = useState(false)
+  const [isWheelZooming, setIsWheelZooming] = useState(false)
 
   useEffect(() => {
     setView(DEFAULT_VIEW)
     dragRef.current = null
     setIsDragging(false)
+    setIsWheelZooming(false)
   }, [svg])
 
   useEffect(() => {
@@ -79,21 +83,53 @@ export function SvgPreviewPanel({
       }
       const delta = event.deltaY < 0 ? SCALE_STEP : -SCALE_STEP
 
+      setIsWheelZooming(true)
+
+      if (wheelTransitionTimerRef.current !== null) {
+        window.clearTimeout(wheelTransitionTimerRef.current)
+      }
+
+      wheelTransitionTimerRef.current = window.setTimeout(() => {
+        setIsWheelZooming(false)
+        wheelTransitionTimerRef.current = null
+      }, WHEEL_TRANSITION_TIMEOUT_MS)
       setView((current) => zoomAt(current, current.scale + delta, origin))
     }
 
     preview.addEventListener('wheel', handleWheel, { passive: false })
 
-    return () => preview.removeEventListener('wheel', handleWheel)
+    return () => {
+      preview.removeEventListener('wheel', handleWheel)
+
+      if (wheelTransitionTimerRef.current !== null) {
+        window.clearTimeout(wheelTransitionTimerRef.current)
+        wheelTransitionTimerRef.current = null
+      }
+    }
   }, [svg])
 
   function zoomBy(delta: number) {
+    stopWheelTransition()
     const bounds = previewRef.current?.getBoundingClientRect()
     const origin = bounds
       ? { x: bounds.width / 2, y: bounds.height / 2 }
       : { x: 0, y: 0 }
 
     setView((current) => zoomAt(current, current.scale + delta, origin))
+  }
+
+  function resetView() {
+    stopWheelTransition()
+    setView(DEFAULT_VIEW)
+  }
+
+  function stopWheelTransition() {
+    if (wheelTransitionTimerRef.current !== null) {
+      window.clearTimeout(wheelTransitionTimerRef.current)
+      wheelTransitionTimerRef.current = null
+    }
+
+    setIsWheelZooming(false)
   }
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
@@ -103,6 +139,8 @@ export function SvgPreviewPanel({
 
     event.preventDefault()
     event.currentTarget.setPointerCapture?.(event.pointerId)
+
+    stopWheelTransition()
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -149,7 +187,7 @@ export function SvgPreviewPanel({
             <button type="button" aria-label={zoomOutLabel} onClick={() => zoomBy(-SCALE_STEP)}>
               −
             </button>
-            <button type="button" aria-label={resetZoomLabel} onClick={() => setView(DEFAULT_VIEW)}>
+            <button type="button" aria-label={resetZoomLabel} onClick={resetView}>
               {Math.round(view.scale * 100)}%
             </button>
             <button type="button" aria-label={zoomInLabel} onClick={() => zoomBy(SCALE_STEP)}>
@@ -163,7 +201,7 @@ export function SvgPreviewPanel({
       {svg ? (
         <div
           ref={previewRef}
-          className={`svg-preview${isDragging ? ' is-dragging' : ''}`}
+          className={`svg-preview${isDragging ? ' is-dragging' : ''}${isWheelZooming ? ' is-wheel-zooming' : ''}`}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={stopDragging}

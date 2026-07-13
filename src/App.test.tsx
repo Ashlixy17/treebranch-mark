@@ -176,8 +176,14 @@ describe('App GitHub token input', () => {
       })
 
       expect(wheelEvent.defaultPrevented).toBe(true)
+      expect(preview.classList.contains('is-wheel-zooming')).toBe(true)
       expect(getButton('Reset SVG preview zoom').textContent).toBe('125%')
       expect(getSvgPreviewContent().style.transform).toBe('translate(-50px, -25px) scale(1.25)')
+
+      click(getButton('Reset SVG preview zoom'))
+
+      expect(preview.classList.contains('is-wheel-zooming')).toBe(false)
+      expect(getSvgPreviewContent().style.transform).toBe('translate(0px, 0px) scale(1)')
     } finally {
       globalThis.fetch = originalFetch
     }
@@ -194,12 +200,18 @@ describe('App GitHub token input', () => {
       const preview = getSvgPreview()
 
       act(() => {
+        preview.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100 }))
+      })
+      expect(preview.classList.contains('is-wheel-zooming')).toBe(true)
+
+      act(() => {
         preview.dispatchEvent(createPointerEvent('pointerdown', 100, 80))
         preview.dispatchEvent(createPointerEvent('pointermove', 145, 110))
       })
 
-      expect(getSvgPreviewContent().style.transform).toBe('translate(45px, 30px) scale(1)')
+      expect(getSvgPreviewContent().style.transform).toBe('translate(45px, 30px) scale(1.25)')
       expect(preview.classList.contains('is-dragging')).toBe(true)
+      expect(preview.classList.contains('is-wheel-zooming')).toBe(false)
 
       act(() => {
         preview.dispatchEvent(createPointerEvent('pointerup', 145, 110))

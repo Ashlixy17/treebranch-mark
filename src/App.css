@@ -498,6 +498,10 @@ h2 {
   will-change: transform;
 }
 
+.svg-preview.is-wheel-zooming .svg-preview-content {
+  transition: transform 140ms ease-out;
+}
+
 .svg-preview svg {
   display: block;
   width: 100%;
