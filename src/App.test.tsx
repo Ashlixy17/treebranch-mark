@@ -46,6 +46,57 @@ afterAll(() => {
 })
 
 describe('App GitHub token input', () => {
+  it('renders month as the default graph grouping setting', () => {
+    renderApp()
+
+    expect(getTimelineGrouping().value).toBe('month')
+  })
+
+  it('translates the graph grouping setting in every supported language', () => {
+    renderApp()
+
+    expect(getTimelineGrouping().options[0].textContent).toBe('Year')
+    expect(getTimelineGrouping().options[1].textContent).toBe('Month')
+    expect(getTimelineGrouping().options[2].textContent).toBe('Day')
+
+    changeSelectValue(getLanguageSelect(), 'zh-CN')
+
+    expect(document.querySelector('.grouping-field span')?.textContent).toBe('时间轴分组')
+    expect(getTimelineGrouping().options[0].textContent).toBe('年')
+    expect(getTimelineGrouping().options[1].textContent).toBe('月')
+    expect(getTimelineGrouping().options[2].textContent).toBe('日')
+
+    changeSelectValue(getLanguageSelect(), 'ja')
+
+    expect(document.querySelector('.grouping-field span')?.textContent).toBe('タイムラインのグループ化')
+    expect(getTimelineGrouping().options[0].textContent).toBe('年')
+    expect(getTimelineGrouping().options[1].textContent).toBe('月')
+    expect(getTimelineGrouping().options[2].textContent).toBe('日')
+  })
+
+  it('redraws the loaded snapshot when grouping changes without another fetch', async () => {
+    const capturedUrls: string[] = []
+    const originalFetch = globalThis.fetch
+
+    globalThis.fetch = (async (input) => {
+      capturedUrls.push(String(input))
+      return fixtureResponseFor(input)
+    }) as typeof fetch
+
+    try {
+      renderApp()
+      await submitRepositoryForm()
+      const requestCount = capturedUrls.length
+
+      changeSelectValue(getTimelineGrouping(), 'day')
+
+      expect(capturedUrls).toHaveLength(requestCount)
+      expect(document.querySelector('.svg-preview')?.textContent).toContain('2026-01-01')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
   it('renders an optional password token input', () => {
     renderApp()
 
@@ -213,6 +264,20 @@ function getTokenInput(): HTMLInputElement {
   return input as HTMLInputElement
 }
 
+function getTimelineGrouping(): HTMLSelectElement {
+  const select = document.querySelector<HTMLSelectElement>('#timeline-grouping')
+
+  expect(select).not.toBeNull()
+  return select as HTMLSelectElement
+}
+
+function getLanguageSelect(): HTMLSelectElement {
+  const select = document.querySelector<HTMLSelectElement>('#language')
+
+  expect(select).not.toBeNull()
+  return select as HTMLSelectElement
+}
+
 function getRepositoryMetricValue(): string {
   const value = document.querySelector<HTMLElement>('.metric-grid div:first-child dd')
 
@@ -226,6 +291,15 @@ function changeInputValue(input: HTMLInputElement, value: string) {
   act(() => {
     valueSetter?.call(input, value)
     input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+
+function changeSelectValue(select: HTMLSelectElement, value: string) {
+  const valueSetter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set
+
+  act(() => {
+    valueSetter?.call(select, value)
+    select.dispatchEvent(new Event('change', { bubbles: true }))
   })
 }
 
@@ -247,6 +321,62 @@ function jsonResponse(body: unknown, status = 200, headers: Record<string, strin
       ...headers,
     },
   })
+}
+
+function fixtureResponseFor(input: RequestInfo | URL): Response {
+  const url = String(input)
+
+  if (url.endsWith('/repos/vuejs/core')) {
+    return jsonResponse({
+      id: 1,
+      name: 'core',
+      full_name: 'vuejs/core',
+      html_url: 'https://github.com/vuejs/core',
+      description: null,
+      stargazers_count: 1,
+      default_branch: 'main',
+      owner: { login: 'vuejs' },
+    })
+  }
+
+  if (url.endsWith('/repos/vuejs/core/branches?per_page=100')) {
+    return jsonResponse([
+      {
+        name: 'main',
+        commit: {
+          sha: 'aaaaaaa1111111111111111111111111111111111',
+          url: 'https://api.github.com/repos/vuejs/core/commits/aaaaaaa1111111111111111111111111111111111',
+        },
+      },
+    ])
+  }
+
+  if (url.includes('/repos/vuejs/core/commits?')) {
+    return jsonResponse([
+      {
+        sha: 'aaaaaaa1111111111111111111111111111111111',
+        html_url: 'https://github.com/vuejs/core/commit/aaaaaaa1111111111111111111111111111111111',
+        commit: {
+          message: 'Initial commit',
+          author: {
+            name: 'Mona',
+            email: 'mona@example.com',
+            date: '2026-01-01T00:00:00Z',
+          },
+          committer: {
+            name: 'Mona',
+            email: 'mona@example.com',
+            date: '2026-01-01T00:00:00Z',
+          },
+        },
+        author: null,
+        committer: null,
+        parents: [],
+      },
+    ])
+  }
+
+  return jsonResponse({}, 404)
 }
 
 function createMemoryStorage(): Storage {

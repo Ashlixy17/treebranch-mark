@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
+import { TimelineLayout } from './layout'
+import type { TimelineGrouping } from './layout'
 import { RenderPipeline } from './pipeline'
 import {
   GitHubApiSource,
@@ -9,7 +11,12 @@ import {
   MemoryCache,
   parseRepositoryInput,
 } from './source'
-import type { GitHubRateLimitStatus, GitSourceErrorCode, GitSourceSnapshot } from './source'
+import type {
+  GitHubRateLimitStatus,
+  GitSourceErrorCode,
+  GitSourceInput,
+  GitSourceSnapshot,
+} from './source'
 import { formatSourceError } from './ui/sourceErrorMessages'
 import type { SourceErrorMessages } from './ui/sourceErrorMessages'
 
@@ -37,6 +44,10 @@ interface Translation {
   githubToken: string
   githubTokenHint: string
   branch: string
+  timelineGrouping: string
+  timelineGroupingYear: string
+  timelineGroupingMonth: string
+  timelineGroupingDay: string
   generateGraph: string
   requestFailed: string
   snapshotSummary: string
@@ -94,6 +105,10 @@ const translations = {
     githubToken: 'GitHub Token (Optional)',
     githubTokenHint: 'Stored locally and sent only to the GitHub API.',
     branch: 'Branch',
+    timelineGrouping: 'Timeline grouping',
+    timelineGroupingYear: 'Year',
+    timelineGroupingMonth: 'Month',
+    timelineGroupingDay: 'Day',
     generateGraph: 'Generate SVG',
     requestFailed: 'Request failed',
     snapshotSummary: 'Git source snapshot summary',
@@ -154,6 +169,10 @@ const translations = {
     githubToken: 'GitHub Token（可选）',
     githubTokenHint: '仅保存在本地，并且只会发送给 GitHub API。',
     branch: '分支',
+    timelineGrouping: '时间轴分组',
+    timelineGroupingYear: '年',
+    timelineGroupingMonth: '月',
+    timelineGroupingDay: '日',
     generateGraph: '生成 SVG',
     requestFailed: '请求失败',
     snapshotSummary: 'Git Source 快照摘要',
@@ -214,6 +233,10 @@ const translations = {
     githubToken: 'GitHub Token（任意）',
     githubTokenHint: 'ローカルに保存され、GitHub API にのみ送信されます。',
     branch: 'ブランチ',
+    timelineGrouping: 'タイムラインのグループ化',
+    timelineGroupingYear: '年',
+    timelineGroupingMonth: '月',
+    timelineGroupingDay: '日',
     generateGraph: 'SVG を生成',
     requestFailed: 'リクエスト失敗',
     snapshotSummary: 'Git Source スナップショット概要',
@@ -258,12 +281,14 @@ function App() {
   const [repositoryInput, setRepositoryInput] = useState('vuejs/core')
   const [githubToken, setGithubToken] = useState('')
   const [branchInput, setBranchInput] = useState('main')
+  const [timelineGrouping, setTimelineGrouping] = useState<TimelineGrouping>('month')
   const [snapshot, setSnapshot] = useState<GitSourceSnapshot | null>(null)
   const [svg, setSvg] = useState<string | null>(null)
   const [rateLimitStatus, setRateLimitStatus] = useState<GitHubRateLimitStatus | null>(null)
   const [errorCode, setErrorCode] = useState<GitSourceErrorCode | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [snapshotCache] = useState(() => new MemoryCache<GitSourceSnapshot>())
+  const pipelineRef = useRef<RenderPipeline<GitSourceInput> | null>(null)
   const t = translations[language]
   const statusKey: StatusKey = isLoading ? 'loading' : errorCode ? 'error' : snapshot ? 'ready' : 'idle'
   const latestCommit = snapshot?.commits[0]
@@ -304,6 +329,22 @@ function App() {
     }
   }
 
+  function handleTimelineGroupingChange(grouping: TimelineGrouping) {
+    setTimelineGrouping(grouping)
+
+    if (!snapshot) {
+      return
+    }
+
+    const result = pipelineRef.current?.renderSnapshot(snapshot, {
+      layout: new TimelineLayout({ grouping }),
+    })
+
+    if (result) {
+      setSvg(result.svg)
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsLoading(true)
@@ -321,7 +362,11 @@ function App() {
         }),
         cache: snapshotCache,
       })
-      const pipeline = new RenderPipeline({ source })
+      const pipeline = new RenderPipeline<GitSourceInput>({
+        source,
+        layout: new TimelineLayout({ grouping: timelineGrouping }),
+      })
+      pipelineRef.current = pipeline
       const repository = parseRepositoryInput(repositoryInput)
       const result = await pipeline.render({
         ...repository,
@@ -435,6 +480,20 @@ function App() {
                 onChange={(event) => setBranchInput(event.target.value)}
                 placeholder="main"
               />
+            </label>
+            <label className="field grouping-field" htmlFor="timeline-grouping">
+              <span>{t.timelineGrouping}</span>
+              <select
+                id="timeline-grouping"
+                value={timelineGrouping}
+                onChange={(event) =>
+                  handleTimelineGroupingChange(event.target.value as TimelineGrouping)
+                }
+              >
+                <option value="year">{t.timelineGroupingYear}</option>
+                <option value="month">{t.timelineGroupingMonth}</option>
+                <option value="day">{t.timelineGroupingDay}</option>
+              </select>
             </label>
             <button type="submit" disabled={isLoading}>
               {isLoading ? t.status.loading : t.generateGraph}
