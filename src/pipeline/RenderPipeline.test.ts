@@ -30,6 +30,25 @@ describe('RenderPipeline', () => {
     expect(result.svg).toContain('bbbbbbb')
   })
 
+  it('renders a supplied snapshot without loading the source', async () => {
+    const source = new ThrowingSource(new Error('must not load'))
+    const snapshot = snapshotFixture()
+
+    const result = await new RenderPipeline({ source }).renderSnapshot(snapshot)
+
+    expect(result.snapshot).toBe(snapshot)
+    expect(result.svg).toContain('2026-01')
+  })
+
+  it('uses TimelineLayout when no layout is supplied', async () => {
+    const result = await new RenderPipeline({ source: new FakeSource(snapshotFixture()) }).render({
+      owner: 'example',
+      repo: 'project',
+    })
+
+    expect(result.svg).toContain('2026-01')
+  })
+
   it('keeps missing branch heads as graph warnings and still returns SVG', async () => {
     const snapshot = snapshotFixture({
       branches: [

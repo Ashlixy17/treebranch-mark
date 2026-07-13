@@ -19,6 +19,7 @@ describe('Local Git RenderPipeline', () => {
     expect(result.graphWarnings).toEqual([])
     expect(result.svg).toContain('<svg')
     expect(result.svg).toContain('abc1234')
+    expect(result.svg).toContain('2026-01')
   })
 })
 

@@ -1,5 +1,5 @@
 import type { BranchGraphBuilderContract, BranchGraphWarning } from '../graph'
-import type { TreeLayoutContract } from '../layout'
+import type { Layout } from '../layout'
 import type { CommitParserContract, ParserWarning } from '../parser'
 import type { RenderModelBuilderContract } from '../render-model'
 import type { SvgRendererContract } from '../renderer'
@@ -9,7 +9,7 @@ export interface RenderPipelineDependencies<TInput = GitSourceInput> {
   source: GitSource<TInput>
   parser?: CommitParserContract
   graphBuilder?: BranchGraphBuilderContract
-  layout?: TreeLayoutContract
+  layout?: Layout
   renderModelBuilder?: RenderModelBuilderContract
   renderer?: SvgRendererContract
 }
@@ -23,4 +23,5 @@ export interface RenderPipelineResult {
 
 export interface RenderPipeline<TInput = GitSourceInput> {
   render(input: TInput): Promise<RenderPipelineResult>
+  renderSnapshot(snapshot: GitSourceSnapshot, overrides?: { layout?: Layout }): RenderPipelineResult
 }

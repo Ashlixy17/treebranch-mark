@@ -1,5 +1,6 @@
 import { BranchGraphBuilder } from '../graph'
-import { TreeLayout } from '../layout'
+import { TimelineLayout } from '../layout'
+import type { Layout } from '../layout'
 import { CommitParser } from '../parser'
 import { RenderModelBuilder } from '../render-model'
 import { SvgRenderer } from '../renderer'
@@ -8,7 +9,7 @@ import type {
   RenderPipelineDependencies,
   RenderPipelineResult,
 } from './types'
-import type { GitSourceInput } from '../source'
+import type { GitSourceInput, GitSourceSnapshot } from '../source'
 
 export class RenderPipeline<TInput = GitSourceInput> implements RenderPipelineContract<TInput> {
   private readonly dependencies: Required<RenderPipelineDependencies<TInput>>
@@ -18,17 +19,23 @@ export class RenderPipeline<TInput = GitSourceInput> implements RenderPipelineCo
       source: dependencies.source,
       parser: dependencies.parser ?? new CommitParser(),
       graphBuilder: dependencies.graphBuilder ?? new BranchGraphBuilder(),
-      layout: dependencies.layout ?? new TreeLayout(),
+      layout: dependencies.layout ?? new TimelineLayout(),
       renderModelBuilder: dependencies.renderModelBuilder ?? new RenderModelBuilder(),
       renderer: dependencies.renderer ?? new SvgRenderer(),
     }
   }
 
   async render(input: TInput): Promise<RenderPipelineResult> {
-    const snapshot = await this.dependencies.source.loadRepository(input)
+    return this.renderSnapshot(await this.dependencies.source.loadRepository(input))
+  }
+
+  renderSnapshot(
+    snapshot: GitSourceSnapshot,
+    overrides: { layout?: Layout } = {},
+  ): RenderPipelineResult {
     const parserResult = this.dependencies.parser.parse(snapshot)
     const graphResult = this.dependencies.graphBuilder.build(parserResult.graph, snapshot.branches)
-    const layout = this.dependencies.layout.layout(graphResult.graph)
+    const layout = (overrides.layout ?? this.dependencies.layout).layout(graphResult.graph)
     const renderModel = this.dependencies.renderModelBuilder.build(layout, graphResult.graph)
 
     return {
