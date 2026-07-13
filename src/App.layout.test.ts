@@ -30,4 +30,13 @@ describe('App control panel layout', () => {
     )
     expect(cssText).toMatch(/\.svg-panel \.panel-heading\s*{[^}]*flex-wrap:\s*wrap;/s)
   })
+
+  it('gives the SVG preview a larger responsive height', () => {
+    expect(cssText).toMatch(
+      /\.svg-preview,\s*\.svg-empty\s*{[^}]*height:\s*clamp\(420px, 62vh, 720px\);/s,
+    )
+    expect(cssText).toMatch(
+      /@media \(max-width: 560px\)[\s\S]*?\.svg-preview,\s*\.svg-empty\s*{[^}]*height:\s*clamp\(320px, 55vh, 480px\);/s,
+    )
+  })
 })

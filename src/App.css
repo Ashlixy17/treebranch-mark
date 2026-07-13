@@ -472,7 +472,7 @@ h2 {
 
 .svg-preview,
 .svg-empty {
-  min-height: 260px;
+  height: clamp(420px, 62vh, 720px);
   border: 1px solid #d8e0ea;
   border-radius: 8px;
   background: #f8fafc;
@@ -798,6 +798,11 @@ h2 {
 }
 
 @media (max-width: 560px) {
+  .svg-preview,
+  .svg-empty {
+    height: clamp(320px, 55vh, 480px);
+  }
+
   .metric-grid {
     grid-template-columns: 1fr;
   }

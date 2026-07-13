@@ -49,7 +49,7 @@ describe('SvgRenderer', () => {
     expect(svg).not.toContain('<image')
   })
 
-  it('renders an avatar node as a clipped 32 pixel image with an escaped URL', () => {
+  it('renders an avatar with a branch-color ring beneath the clipped image', () => {
     const renderer = new SvgRenderer()
     const model: RenderModel = {
       nodes: [
@@ -72,13 +72,15 @@ describe('SvgRenderer', () => {
       '<clipPath id="commit-avatar-clip" clipPathUnits="objectBoundingBox">',
     )
     expect(svg).toContain('<circle cx="0.5" cy="0.5" r="0.5" />')
+    const ring = '<circle cx="120" cy="80" r="18" fill="none" stroke="currentColor" stroke-width="3" />'
+    expect(svg).toContain(ring)
     expect(svg).toContain(
       '<image href="https://avatars.example/avatar?a=1&amp;b=2" x="104" y="64" width="32" height="32" clip-path="url(#commit-avatar-clip)" preserveAspectRatio="xMidYMid slice" />',
     )
+    expect(svg.indexOf(ring)).toBeLessThan(svg.indexOf('<image'))
     expect(svg).toContain(
       '<text x="120" y="112" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="currentColor">avatar</text>',
     )
-    expect(svg).not.toContain('<circle cx="120" cy="80"')
   })
 
   it('falls back to a circle when the avatar URL is empty', () => {

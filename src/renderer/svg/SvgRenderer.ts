@@ -10,6 +10,8 @@ const LABEL_OFFSET = 20
 const EMPTY_VIEW_BOX_SIZE = 48
 const AVATAR_SIZE = 32
 const AVATAR_OFFSET = AVATAR_SIZE / 2
+const AVATAR_RING_RADIUS = 18
+const AVATAR_RING_STROKE_WIDTH = 3
 const AVATAR_LABEL_OFFSET = 32
 const AVATAR_CLIP_ID = 'commit-avatar-clip'
 const FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
@@ -65,6 +67,14 @@ export class SvgRenderer implements SvgRendererContract {
       const avatarUrl = getAvatarUrl(node)
 
       if (avatarUrl) {
+        svg.child('circle', {
+          cx: node.x,
+          cy: node.y,
+          r: AVATAR_RING_RADIUS,
+          fill: 'none',
+          stroke: 'currentColor',
+          'stroke-width': AVATAR_RING_STROKE_WIDTH,
+        })
         svg.child('image', {
           href: avatarUrl,
           x: node.x - AVATAR_OFFSET,
