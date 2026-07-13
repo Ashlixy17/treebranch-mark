@@ -77,7 +77,7 @@ treebranch render ./my-project --branch main --max-commits 200 --output docs/bra
 - Browser Viewer 与 Local Git CLI 共用同一个 RenderPipeline
 - Source、Pipeline、Token 和构建边界自动化测试
 
-当前处于 `v0.2.0` 开发阶段。Local Git Source 与 CLI MVP 已完成，Timeline、Metro、动画和 GitHub Action 尚未实现。
+当前版本为 `v0.2.0`。Local Git Source、共享 RenderPipeline 与 CLI MVP 已发布；Timeline、Metro、动画和 GitHub Action 尚未实现。
 
 ## 架构
 
@@ -221,7 +221,7 @@ dist-cli/treebranch.js Node CLI
 
 - [Local Git Source Architecture Design](docs/superpowers/specs/2026-07-12-local-git-source-design.md)
 - [ADR 0007: Local Git Source Boundary](docs/adr/0007-local-git-source.md)
-- [v0.2.0 Release Note Draft](docs/releases/v0.2.0.md)
+- [v0.2.0 Release Note（中英双语）](docs/releases/v0.2.0.md)
 - [v0.2.0 Release Checklist](docs/releases/v0.2.0-checklist.md)
 
 <details>
@@ -251,7 +251,8 @@ dist-cli/treebranch.js Node CLI
 - [x] Local Git Source
 - [x] Local Git RenderPipeline
 - [x] `treebranch render` CLI MVP
-- [ ] v0.2.0 Release
+- [x] v0.2.0 Release Note 与 Release Checklist
+- [x] v0.2.0 Release
 - [ ] Timeline / Metro Layout
 - [ ] CLI package distribution
 - [ ] GitHub Action
