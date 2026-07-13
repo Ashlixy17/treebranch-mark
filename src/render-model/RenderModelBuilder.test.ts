@@ -9,13 +9,28 @@ import { RenderModelBuilder } from './RenderModelBuilder'
 describe('RenderModelBuilder', () => {
   it('returns an empty render model for an empty layout', () => {
     const builder = new RenderModelBuilder()
-    const layout: LayoutResult = { nodes: [], edges: [] }
+    const layout: LayoutResult = { nodes: [], edges: [], groups: [] }
     const graph: BranchGraph = { branches: new Map() }
 
     expect(builder.build(layout, graph)).toEqual({
       nodes: [],
       edges: [],
+      groups: [],
     })
+  })
+
+  it('preserves date groups from the layout', () => {
+    const builder = new RenderModelBuilder()
+    const layout: LayoutResult = {
+      nodes: [],
+      edges: [],
+      groups: [{ id: '2026-01', label: '2026-01', startX: 0, endX: 120 }],
+    }
+    const graph: BranchGraph = { branches: new Map() }
+
+    expect(builder.build(layout, graph).groups).toEqual([
+      { id: '2026-01', label: '2026-01', startX: 0, endX: 120 },
+    ])
   })
 
   it('maps layout nodes to commit render nodes', () => {
@@ -23,6 +38,7 @@ describe('RenderModelBuilder', () => {
     const layout: LayoutResult = {
       nodes: [{ id: 'abcdef1234567890', x: 120, y: 100 }],
       edges: [],
+      groups: [],
     }
     const graph = graphFixture([commitNodeFixture('abcdef1234567890')])
 
@@ -44,6 +60,7 @@ describe('RenderModelBuilder', () => {
     const layout: LayoutResult = {
       nodes: [{ id: 'avatar1234567890', x: 120, y: 100 }],
       edges: [],
+      groups: [],
     }
     const graph = graphFixture([
       commitNodeFixture('avatar1234567890', 'https://avatars.githubusercontent.com/u/1'),
@@ -59,6 +76,7 @@ describe('RenderModelBuilder', () => {
     const layout: LayoutResult = {
       nodes: [{ id: 'empty-avatar', x: 120, y: 100 }],
       edges: [],
+      groups: [],
     }
     const graph = graphFixture([commitNodeFixture('empty-avatar', '')])
 
@@ -70,6 +88,7 @@ describe('RenderModelBuilder', () => {
     const layout: LayoutResult = {
       nodes: [],
       edges: [{ from: 'parent', to: 'child' }],
+      groups: [],
     }
     const graph: BranchGraph = { branches: new Map() }
 
@@ -87,6 +106,7 @@ describe('RenderModelBuilder', () => {
     const layout: LayoutResult = {
       nodes: [{ id: 'unknown123456', x: 0, y: 0 }],
       edges: [],
+      groups: [],
     }
     const graph: BranchGraph = { branches: new Map() }
 
@@ -101,6 +121,7 @@ describe('RenderModelBuilder', () => {
     const layout: LayoutResult = {
       nodes: [{ id: 'abcdef1234567890', x: 120, y: 100 }],
       edges: [{ from: 'parent', to: 'abcdef1234567890' }],
+      groups: [],
     }
     const graph = graphFixture([commitNodeFixture('abcdef1234567890')])
 
@@ -117,6 +138,7 @@ describe('RenderModelBuilder', () => {
         { id: '1234567890abcdef', x: 240, y: 100 },
       ],
       edges: [{ from: 'abcdef1234567890', to: '1234567890abcdef' }],
+      groups: [],
     }
     const graph = graphFixture([
       commitNodeFixture('abcdef1234567890'),
@@ -131,6 +153,7 @@ describe('RenderModelBuilder', () => {
     const layout: LayoutResult = {
       nodes: [{ id: 'abcdef1234567890', x: 120, y: 100 }],
       edges: [{ from: 'parent', to: 'abcdef1234567890' }],
+      groups: [],
     }
     const graph = graphFixture([commitNodeFixture('abcdef1234567890')])
 
@@ -155,6 +178,7 @@ describe('RenderModelBuilder', () => {
     const layout: LayoutResult = {
       nodes: [{ id: commit.commit.sha, x: 120, y: 100 }],
       edges: [],
+      groups: [],
     }
     const beforeLayout = structuredClone(layout)
     const beforeGraph = snapshotBranchGraph(graph)

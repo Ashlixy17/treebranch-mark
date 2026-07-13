@@ -1,4 +1,4 @@
-import type { RenderModel, RenderNode } from '../../render-model'
+import type { RenderGroup, RenderModel, RenderNode } from '../../render-model'
 import { SvgBuilder } from './SvgBuilder'
 import type { SvgRenderer as SvgRendererContract, SvgRendererOptions } from './types'
 
@@ -13,6 +13,7 @@ const AVATAR_OFFSET = AVATAR_SIZE / 2
 const AVATAR_LABEL_OFFSET = 32
 const AVATAR_CLIP_ID = 'commit-avatar-clip'
 const FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
+const GROUP_HEADER_OFFSET = DEFAULT_PADDING
 
 export class SvgRenderer implements SvgRendererContract {
   render(model: RenderModel, options: SvgRendererOptions = {}): string {
@@ -20,7 +21,7 @@ export class SvgRenderer implements SvgRendererContract {
     const nodesById = new Map(model.nodes.map((node) => [node.id, node]))
     const svg = new SvgBuilder('svg', {
       xmlns: 'http://www.w3.org/2000/svg',
-      viewBox: getViewBox(model.nodes, renderOptions.padding),
+      viewBox: getViewBox(model.nodes, model.groups, renderOptions.padding, renderOptions.fontSize),
       role: 'img',
       'aria-label': 'Git history graph',
     })
@@ -57,6 +58,8 @@ export class SvgRenderer implements SvgRendererContract {
         opacity: '0.6',
       })
     }
+
+    renderGroups(svg, model.nodes, model.groups, renderOptions)
 
     for (const node of model.nodes) {
       const avatarUrl = getAvatarUrl(node)
@@ -116,17 +119,85 @@ function resolveOptions(options: SvgRendererOptions): Required<SvgRendererOption
   }
 }
 
-function getViewBox(nodes: RenderNode[], padding: number): string {
-  if (nodes.length === 0) {
+function renderGroups(
+  svg: SvgBuilder,
+  nodes: RenderNode[],
+  groups: RenderGroup[],
+  renderOptions: Required<SvgRendererOptions>,
+): void {
+  if (groups.length === 0) {
+    return
+  }
+
+  const headerY = getGroupHeaderY(nodes)
+  const separatorStartY = headerY + renderOptions.fontSize
+  const separatorEndY = getGroupSeparatorEndY(nodes, separatorStartY)
+
+  groups.forEach((group, index) => {
+    if (index > 0) {
+      const previousGroup = groups[index - 1]
+      const separatorX = (previousGroup.endX + group.startX) / 2
+
+      svg.child('line', {
+        x1: separatorX,
+        y1: separatorStartY,
+        x2: separatorX,
+        y2: separatorEndY,
+        stroke: 'currentColor',
+        'stroke-width': renderOptions.edgeStrokeWidth,
+        opacity: '0.3',
+      })
+    }
+
+    svg.child(
+      'text',
+      {
+        x: group.startX,
+        y: headerY,
+        'font-family': FONT_FAMILY,
+        'font-size': renderOptions.fontSize,
+        fill: 'currentColor',
+      },
+      group.label,
+    )
+  })
+}
+
+function getViewBox(
+  nodes: RenderNode[],
+  groups: RenderGroup[],
+  padding: number,
+  fontSize: number,
+): string {
+  if (nodes.length === 0 && groups.length === 0) {
     return `0 0 ${EMPTY_VIEW_BOX_SIZE} ${EMPTY_VIEW_BOX_SIZE}`
   }
 
-  const xs = nodes.map((node) => node.x)
-  const ys = nodes.map((node) => node.y)
+  const headerY = getGroupHeaderY(nodes)
+  const separatorStartY = headerY + fontSize
+  const separatorEndY = getGroupSeparatorEndY(nodes, separatorStartY)
+  const separatorXs = groups.slice(1).map((group, index) => (groups[index].endX + group.startX) / 2)
+  const xs = [
+    ...nodes.map((node) => node.x),
+    ...groups.flatMap((group) => [group.startX, group.endX]),
+    ...separatorXs,
+  ]
+  const ys = [
+    ...nodes.map((node) => node.y),
+    ...(groups.length > 0 ? [headerY - fontSize, separatorEndY] : []),
+  ]
   const minX = Math.min(...xs) - padding
   const minY = Math.min(...ys) - padding
   const maxX = Math.max(...xs) + padding
   const maxY = Math.max(...ys) + padding
 
   return `${minX} ${minY} ${maxX - minX} ${maxY - minY}`
+}
+
+function getGroupHeaderY(nodes: RenderNode[]): number {
+  return (nodes.length > 0 ? Math.min(...nodes.map((node) => node.y)) : 0) - GROUP_HEADER_OFFSET
+}
+
+function getGroupSeparatorEndY(nodes: RenderNode[], separatorStartY: number): number {
+  return nodes.length > 0 ? Math.max(...nodes.map((node) => node.y)) : separatorStartY
 }

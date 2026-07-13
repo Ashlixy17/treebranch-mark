@@ -8,6 +8,14 @@ export type RenderEdgeStyleToken = 'commit-edge'
 export interface RenderModel {
   nodes: RenderNode[]
   edges: RenderEdge[]
+  groups: RenderGroup[]
+}
+
+export interface RenderGroup {
+  id: string
+  label: string
+  startX: number
+  endX: number
 }
 
 export interface RenderNode {

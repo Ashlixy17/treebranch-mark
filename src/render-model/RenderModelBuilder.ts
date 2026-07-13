@@ -24,6 +24,12 @@ export class RenderModelBuilder implements RenderModelBuilderContract {
         to: edge.to,
         styleToken: 'commit-edge',
       })),
+      groups: layout.groups.map((group) => ({
+        id: group.id,
+        label: group.label,
+        startX: group.startX,
+        endX: group.endX,
+      })),
     }
   }
 }

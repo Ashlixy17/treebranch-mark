@@ -9,6 +9,7 @@ describe('SvgRenderer', () => {
     const model: RenderModel = {
       nodes: [],
       edges: [],
+      groups: [],
     }
 
     const svg = renderer.render(model)
@@ -36,6 +37,7 @@ describe('SvgRenderer', () => {
         },
       ],
       edges: [],
+      groups: [],
     }
 
     const svg = renderer.render(model)
@@ -60,6 +62,7 @@ describe('SvgRenderer', () => {
         ),
       ],
       edges: [],
+      groups: [],
     }
 
     const svg = renderer.render(model)
@@ -83,6 +86,7 @@ describe('SvgRenderer', () => {
     const model: RenderModel = {
       nodes: [nodeFixture('empty-avatar', 120, 80, 'empty-a', '')],
       edges: [],
+      groups: [],
     }
 
     const svg = renderer.render(model)
@@ -100,6 +104,7 @@ describe('SvgRenderer', () => {
         nodeFixture('child', 120, 0),
       ],
       edges: [{ from: 'parent', to: 'child', styleToken: 'commit-edge' }],
+      groups: [],
     }
 
     const svg = renderer.render(model)
@@ -121,6 +126,7 @@ describe('SvgRenderer', () => {
         { from: 'root', to: 'middle', styleToken: 'commit-edge' },
         { from: 'middle', to: 'feature', styleToken: 'commit-edge' },
       ],
+      groups: [],
     }
 
     expect(renderer.render(model)).toEqual(renderer.render(model))
@@ -134,6 +140,7 @@ describe('SvgRenderer', () => {
     const model: RenderModel = {
       nodes: [nodeFixture('commit', 0, 0)],
       edges: [],
+      groups: [],
     }
 
     const svg = renderer.render(model)
@@ -159,9 +166,40 @@ describe('SvgRenderer', () => {
         nodeFixture('1234567890abcdef', 120, 0, '1234567'),
       ],
       edges: [{ from: 'abcdef1234567890', to: '1234567890abcdef', styleToken: 'commit-edge' }],
+      groups: [],
     }
 
     expect(renderer.render(model)).toBe(normalizeSvg(goldenSvg))
+  })
+
+  it('renders date group labels, a separator, and bounds that include the header', () => {
+    const renderer = new SvgRenderer()
+    const model: RenderModel = {
+      nodes: [nodeFixture('first', 0, 0), nodeFixture('second', 240, 0)],
+      edges: [],
+      groups: [
+        { id: '2026-01', label: '2026-01', startX: 0, endX: 120 },
+        { id: '2026-02', label: '2026-02', startX: 240, endX: 360 },
+      ],
+    }
+
+    const svg = renderer.render(model)
+
+    expect(svg).toContain('>2026-01</text>')
+    expect(svg).toContain('>2026-02</text>')
+    expect(svg).toContain('<line x1="180"')
+    expect(svg).toContain('viewBox="-36 -')
+  })
+
+  it('escapes date group labels', () => {
+    const renderer = new SvgRenderer()
+    const model: RenderModel = {
+      nodes: [nodeFixture('commit', 0, 100)],
+      edges: [],
+      groups: [{ id: 'group', label: '2026 < 2027 & beyond', startX: 0, endX: 0 }],
+    }
+
+    expect(renderer.render(model)).toContain('>2026 &lt; 2027 &amp; beyond</text>')
   })
 })
 
