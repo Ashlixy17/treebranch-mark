@@ -31,6 +31,8 @@ vuejs/core
 
 浏览器支持可选 GitHub Personal Access Token、API 配额状态、浅色/暗夜模式，以及英语、简体中文、日语切换。
 
+Timeline is the default graph layout. In the Browser Viewer, choose UTC year, month, or day grouping in Graph settings; changing it redraws the loaded graph without another repository request.
+
 ### Local Git CLI
 
 环境要求：Node.js `>=20.19.0`，并且 Git 已加入 `PATH`。
@@ -57,6 +59,8 @@ treebranch render <repository-path>
       --max-commits <count> 每个分支最多读取的 Commit 数，默认 100
   -h, --help                查看帮助
 ```
+
+The Local Git CLI does not provide a Timeline grouping option.
 
 示例：
 
