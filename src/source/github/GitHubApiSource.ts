@@ -89,9 +89,18 @@ export class GitHubApiSource implements GitSource {
       input.options?.maxCommitsPerBranch ?? DEFAULT_MAX_COMMITS_PER_BRANCH
     const repository = await this.client.getRepository(input.owner, input.repo)
     const branches = await this.client.listBranches(input.owner, input.repo)
-    const selectedBranches = input.branch
-      ? branches.filter((branch) => branch.name === input.branch)
-      : branches
+    const requestedBranch = input.branch?.trim()
+    const requestedBranchMatch = requestedBranch
+      ? branches.find((branch) => branch.name === requestedBranch)
+      : undefined
+    const fallbackBranch = branches.find((branch) => branch.name === repository.default_branch)
+    const selectedBranches = !requestedBranch
+      ? branches
+      : requestedBranchMatch
+        ? [requestedBranchMatch]
+        : fallbackBranch
+          ? [fallbackBranch]
+          : branches
     const commitGroups = await Promise.all(
       selectedBranches.map((branch) =>
         this.client.listCommits(input.owner, input.repo, branch.name, maxCommitsPerBranch),
@@ -127,7 +136,7 @@ export class GitHubApiSource implements GitSource {
         message: 'The repository reached the pull-request page limit; some pull requests may be omitted.',
       })
     }
-    const mainBranchName = input.branch ?? repository.default_branch
+    const mainBranchName = requestedBranchMatch?.name ?? repository.default_branch
     const mainBranchIndex = selectedBranches.findIndex((branch) => branch.name === mainBranchName)
     const mainCommits = normalizedCommitGroups[mainBranchIndex] ?? normalizedCommitGroups.flat()
     const mainDates = timelineBounds(mainCommits)
@@ -145,6 +154,14 @@ export class GitHubApiSource implements GitSource {
       ? normalizeReleases(releaseResponses, tags, mainCommits)
       : { releases: [], warnings: [] }
 
+    const branchWarnings: GitSourceWarning[] = requestedBranch && !requestedBranchMatch
+      ? [{
+          code: 'branch-not-found-fallback',
+          message: 'Branch ' + requestedBranch + ' was not found; using the repository default branch ' +
+            repository.default_branch + '.',
+        }]
+      : []
+
     return {
       source: this.kind,
       repository: normalizeRepository(repository),
@@ -156,7 +173,7 @@ export class GitHubApiSource implements GitSource {
       pullRequests,
       releases: releaseResult.releases,
       tags,
-      warnings: [...capacityWarnings, ...releaseResult.warnings],
+      warnings: [...branchWarnings, ...capacityWarnings, ...releaseResult.warnings],
       pullRequestCapacity: {
         requested,
         mergedLoaded: 0,

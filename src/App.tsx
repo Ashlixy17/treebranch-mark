@@ -606,6 +606,10 @@ function App() {
       const input = sourceInput(false)
       sourceInputRef.current = input
       const previewSnapshot = await source.loadRepository(input)
+      const resolvedBranch = previewSnapshot.branches[0]?.name
+      if (resolvedBranch && resolvedBranch !== input.branch) {
+        setBranchInput(resolvedBranch)
+      }
 
       setSnapshot(previewSnapshot)
       setSvg(null)
@@ -613,7 +617,10 @@ function App() {
         message: warning.message,
         pullRequestNumber: warning.pullRequestNumber,
       })))
-      setGenerationPlan(planFor(input, true))
+      setGenerationPlan({
+        ...planFor(input, true),
+        branch: resolvedBranch ?? input.branch ?? 'default branch',
+      })
       setAwaitingConfirmation(true)
       setRateLimitStatus(source.getRateLimitStatus() ?? rateLimitStatus)
     } catch (caughtError) {

@@ -126,6 +126,7 @@ export interface GitTag {
 export type GitSourceWarningCode =
   | 'pr-commits-unavailable'
   | 'pr-commits-truncated'
+  | 'branch-not-found-fallback'
   | 'release-target-inferred'
   | 'capacity-partial'
 
