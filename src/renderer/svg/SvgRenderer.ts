@@ -1,4 +1,4 @@
-import type { RenderGroup, RenderModel, RenderNode } from '../../render-model'
+import type { RenderGroup, RenderLaneLabel, RenderModel, RenderNode } from '../../render-model'
 import { SvgBuilder } from './SvgBuilder'
 import type { SvgRenderer as SvgRendererContract, SvgRendererOptions } from './types'
 
@@ -23,7 +23,13 @@ export class SvgRenderer implements SvgRendererContract {
     const nodesById = new Map(model.nodes.map((node) => [node.id, node]))
     const svg = new SvgBuilder('svg', {
       xmlns: 'http://www.w3.org/2000/svg',
-      viewBox: getViewBox(model.nodes, model.groups, renderOptions.padding, renderOptions.fontSize),
+      viewBox: getViewBox(
+        model.nodes,
+        model.groups,
+        model.laneLabels ?? [],
+        renderOptions.padding,
+        renderOptions.fontSize,
+      ),
       role: 'img',
       'aria-label': 'Git history graph',
     })
@@ -49,22 +55,52 @@ export class SvgRenderer implements SvgRendererContract {
         continue
       }
 
-      svg.child('line', {
-        x1: from.x,
-        y1: from.y,
-        x2: to.x,
-        y2: to.y,
-        stroke: 'currentColor',
+      const stroke = edge.color ?? 'currentColor'
+      const edgeAttributes = {
+        stroke,
         'stroke-width': renderOptions.edgeStrokeWidth,
         'stroke-linecap': 'round',
         opacity: '0.6',
-      })
+        ...(edge.inferred ? { 'stroke-dasharray': '6 5' } : {}),
+      }
+
+      if (edge.path) {
+        svg.child('path', {
+          d: edge.path,
+          fill: 'none',
+          ...edgeAttributes,
+        })
+      } else {
+        svg.child('line', {
+          x1: from.x,
+          y1: from.y,
+          x2: to.x,
+          y2: to.y,
+          ...edgeAttributes,
+        })
+      }
     }
 
     renderGroups(svg, model.nodes, model.groups, renderOptions)
 
     for (const node of model.nodes) {
       const avatarUrl = getAvatarUrl(node)
+      const nodeColor = node.color ?? 'currentColor'
+
+      if (node.kind === 'release' || node.kind === 'tag') {
+        renderLabelNode(svg, node, renderOptions)
+        continue
+      }
+
+      if (node.kind === 'junction') {
+        svg.child('circle', {
+          cx: node.x,
+          cy: node.y,
+          r: 4,
+          fill: nodeColor,
+        })
+        continue
+      }
 
       if (avatarUrl) {
         svg.child('circle', {
@@ -72,7 +108,7 @@ export class SvgRenderer implements SvgRendererContract {
           cy: node.y,
           r: AVATAR_RING_RADIUS,
           fill: 'none',
-          stroke: 'currentColor',
+          stroke: nodeColor,
           'stroke-width': AVATAR_RING_STROKE_WIDTH,
         })
         svg.child('image', {
@@ -89,7 +125,7 @@ export class SvgRenderer implements SvgRendererContract {
           cx: node.x,
           cy: node.y,
           r: renderOptions.nodeRadius,
-          fill: 'currentColor',
+          fill: nodeColor,
         })
       }
 
@@ -106,6 +142,8 @@ export class SvgRenderer implements SvgRendererContract {
         node.label,
       )
     }
+
+    renderLaneLabels(svg, model.laneLabels ?? [], renderOptions)
 
     return svg.build()
   }
@@ -126,6 +164,95 @@ function resolveOptions(options: SvgRendererOptions): Required<SvgRendererOption
     nodeRadius: options.nodeRadius ?? DEFAULT_NODE_RADIUS,
     edgeStrokeWidth: options.edgeStrokeWidth ?? DEFAULT_EDGE_STROKE_WIDTH,
     fontSize: options.fontSize ?? DEFAULT_FONT_SIZE,
+  }
+}
+
+function renderLabelNode(
+  svg: SvgBuilder,
+  node: RenderNode,
+  renderOptions: Required<SvgRendererOptions>,
+): void {
+  const labels = node.labels ?? []
+  if (labels.length === 0) {
+    svg.child('circle', {
+      cx: node.x,
+      cy: node.y,
+      r: renderOptions.nodeRadius,
+      fill: node.color ?? 'currentColor',
+    })
+    return
+  }
+
+  labels.forEach((label, index) => {
+    const width = Math.max(28, label.text.length * renderOptions.fontSize * 0.7 + 16)
+    const y = node.y + index * (renderOptions.fontSize + 10)
+    svg.child('rect', {
+      x: node.x - width / 2,
+      y: y - renderOptions.fontSize,
+      width,
+      height: renderOptions.fontSize + 8,
+      rx: 4,
+      fill: 'none',
+      stroke: node.color ?? 'currentColor',
+      'stroke-width': 2,
+      ...(label.prerelease ? { 'stroke-dasharray': '4 3' } : {}),
+    })
+    svg.child(
+      'text',
+      {
+        x: node.x,
+        y,
+        'text-anchor': 'middle',
+        'font-family': FONT_FAMILY,
+        'font-size': renderOptions.fontSize,
+        fill: 'currentColor',
+      },
+      label.text,
+    )
+  })
+}
+
+function renderLaneLabels(
+  svg: SvgBuilder,
+  labels: RenderLaneLabel[],
+  renderOptions: Required<SvgRendererOptions>,
+): void {
+  for (const label of labels) {
+    svg.child(
+      'text',
+      {
+        x: label.x,
+        y: label.y,
+        'font-family': FONT_FAMILY,
+        'font-size': renderOptions.fontSize,
+        fill: label.color,
+      },
+      label.text,
+    )
+    if (label.badge === 'open') {
+      const badgeX = label.x + label.text.length * renderOptions.fontSize * 0.62 + 8
+      svg.child('rect', {
+        x: badgeX,
+        y: label.y - renderOptions.fontSize,
+        width: 36,
+        height: renderOptions.fontSize + 6,
+        rx: 4,
+        fill: label.color,
+        opacity: 0.16,
+      })
+      svg.child(
+        'text',
+        {
+          x: badgeX + 18,
+          y: label.y,
+          'text-anchor': 'middle',
+          'font-family': FONT_FAMILY,
+          'font-size': renderOptions.fontSize - 1,
+          fill: label.color,
+        },
+        'Open',
+      )
+    }
   }
 }
 
@@ -176,10 +303,11 @@ function renderGroups(
 function getViewBox(
   nodes: RenderNode[],
   groups: RenderGroup[],
+  laneLabels: RenderLaneLabel[],
   padding: number,
   fontSize: number,
 ): string {
-  if (nodes.length === 0 && groups.length === 0) {
+  if (nodes.length === 0 && groups.length === 0 && laneLabels.length === 0) {
     return `0 0 ${EMPTY_VIEW_BOX_SIZE} ${EMPTY_VIEW_BOX_SIZE}`
   }
 
@@ -192,10 +320,12 @@ function getViewBox(
     ...groups.flatMap((group) => [group.startX, group.endX]),
     ...groups.map((group) => group.startX + group.label.length * fontSize),
     ...separatorXs,
+    ...laneLabels.map((label) => label.x + label.text.length * fontSize),
   ]
   const ys = [
     ...nodes.map((node) => node.y),
     ...(groups.length > 0 ? [headerY - fontSize, separatorEndY] : []),
+    ...laneLabels.map((label) => label.y - fontSize),
   ]
   const minX = Math.min(...xs) - padding
   const minY = Math.min(...ys) - padding

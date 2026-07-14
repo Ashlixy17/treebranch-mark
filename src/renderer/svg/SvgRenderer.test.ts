@@ -116,6 +116,87 @@ describe('SvgRenderer', () => {
     )
   })
 
+  it('renders colored curved edges, release labels, junctions, and open lane labels', () => {
+    const renderer = new SvgRenderer()
+    const model: RenderModel = {
+      nodes: [
+        {
+          id: 'main-release',
+          x: 0,
+          y: 0,
+          label: 'v1.0.0',
+          kind: 'release',
+          styleToken: 'release',
+          avatarUrl: null,
+          color: '#2563eb',
+          labels: [
+            {
+              text: 'v1.0.0',
+              kind: 'release',
+              url: null,
+              prerelease: false,
+              inferred: false,
+            },
+          ],
+        },
+        {
+          id: 'pr-7-p',
+          x: 120,
+          y: -100,
+          label: 'pr-7-p',
+          kind: 'commit',
+          styleToken: 'commit',
+          avatarUrl: 'https://avatars.example/avatar.png',
+          color: '#db2777',
+        },
+        {
+          id: 'main-junction',
+          x: 240,
+          y: 0,
+          label: '',
+          kind: 'junction',
+          styleToken: 'junction',
+          avatarUrl: null,
+          color: '#2563eb',
+        },
+      ],
+      edges: [
+        {
+          id: 'pr-7-fork',
+          from: 'main-release',
+          to: 'pr-7-p',
+          styleToken: 'fork-edge',
+          color: '#db2777',
+          path: 'M 0 0 C 60 0, 60 -100, 120 -100',
+          inferred: true,
+        },
+      ],
+      groups: [],
+      laneLabels: [
+        {
+          id: 'pr-7',
+          x: 120,
+          y: -122,
+          text: 'ada:feature · #7',
+          color: '#db2777',
+          url: 'https://github.com/octo/repo/pull/7',
+          badge: 'open',
+        },
+      ],
+    }
+
+    const svg = renderer.render(model)
+
+    expect(svg).toContain('<path d="M 0 0 C 60 0, 60 -100, 120 -100"')
+    expect(svg).toContain('stroke="#db2777"')
+    expect(svg).toContain('stroke-dasharray="6 5"')
+    expect(svg).toContain('<rect')
+    expect(svg).toContain('>v1.0.0</text>')
+    expect(svg).toContain('cx="240" cy="0" r="4"')
+    expect(svg).toContain('>ada:feature · #7</text>')
+    expect(svg).toContain('>Open</text>')
+  })
+
   it('renders multiple nodes and edges deterministically', () => {
     const renderer = new SvgRenderer()
     const model: RenderModel = {
