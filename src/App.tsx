@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
-import type { TimelineGrouping } from './layout'
+import type { TimelineGrouping, TimelineSpacing } from './layout'
 import { ForkTimelinePipeline } from './pipeline'
 import type { ForkTimelineSettings } from './pipeline'
 import {
@@ -57,6 +57,9 @@ interface Translation {
   timelineGroupingYear: string
   timelineGroupingMonth: string
   timelineGroupingDay: string
+  timelineSpacing: string
+  timelineSpacingEqual: string
+  timelineSpacingTime: string
   graphSettings: string
   mainNodeType: string
   mainNodeTypeCommit: string
@@ -136,6 +139,9 @@ const translations = {
     timelineGroupingYear: 'Year',
     timelineGroupingMonth: 'Month',
     timelineGroupingDay: 'Day',
+    timelineSpacing: 'Horizontal spacing',
+    timelineSpacingEqual: 'Equal spacing',
+    timelineSpacingTime: 'Time-based spacing',
     graphSettings: 'Graph Settings',
     mainNodeType: 'Main node type',
     mainNodeTypeCommit: 'Commit',
@@ -218,6 +224,9 @@ const translations = {
     timelineGroupingYear: '年',
     timelineGroupingMonth: '月',
     timelineGroupingDay: '日',
+    timelineSpacing: '横向间距',
+    timelineSpacingEqual: '等距输出',
+    timelineSpacingTime: '按时间间距',
     graphSettings: '图形设置',
     mainNodeType: '主干节点类型',
     mainNodeTypeCommit: '提交',
@@ -300,6 +309,9 @@ const translations = {
     timelineGroupingYear: '年',
     timelineGroupingMonth: '月',
     timelineGroupingDay: '日',
+    timelineSpacing: '横方向の間隔',
+    timelineSpacingEqual: '等間隔',
+    timelineSpacingTime: '時間間隔',
     graphSettings: 'グラフ設定',
     mainNodeType: 'メインノード種別',
     mainNodeTypeCommit: 'コミット',
@@ -363,6 +375,7 @@ function App() {
   const [githubToken, setGithubToken] = useState('')
   const [branchInput, setBranchInput] = useState('main')
   const [timelineGrouping, setTimelineGrouping] = useState<TimelineGrouping>('month')
+  const [timelineSpacing, setTimelineSpacing] = useState<TimelineSpacing>('equal')
   const [mainNodeMode, setMainNodeMode] = useState<MainNodeMode>('commit')
   const [includeOpenPullRequests, setIncludeOpenPullRequests] = useState(false)
   const [pullRequestLimit, setPullRequestLimit] = useState<GitPullRequestBranchLimit>(20)
@@ -459,6 +472,17 @@ function App() {
     redraw({ ...currentSettings(), mainNodeMode })
   }
 
+  function handleTimelineSpacingChange(spacing: TimelineSpacing) {
+    setTimelineSpacing(spacing)
+    if (awaitingConfirmation) {
+      setAwaitingConfirmation(false)
+      setGenerationPlan(null)
+      setSvg(null)
+      return
+    }
+    redraw({ ...currentSettings(), spacing })
+  }
+
   function handleIncludeOpenPullRequestsChange(includeOpenPullRequests: boolean) {
     setIncludeOpenPullRequests(includeOpenPullRequests)
     if (awaitingConfirmation) {
@@ -516,6 +540,7 @@ function App() {
   function currentSettings(): ForkTimelineSettings {
     return {
       grouping: timelineGrouping,
+      spacing: timelineSpacing,
       mainNodeMode,
       includeOpenPullRequests,
       pullRequestLimit,
@@ -804,6 +829,20 @@ function App() {
                 <option value="year">{t.timelineGroupingYear}</option>
                 <option value="month">{t.timelineGroupingMonth}</option>
                 <option value="day">{t.timelineGroupingDay}</option>
+              </select>
+            </label>
+            <label className="field" htmlFor="timeline-spacing">
+              <span>{t.timelineSpacing}</span>
+              <select
+                id="timeline-spacing"
+                value={timelineSpacing}
+                disabled={isLoading}
+                onChange={(event) =>
+                  handleTimelineSpacingChange(event.target.value as TimelineSpacing)
+                }
+              >
+                <option value="equal">{t.timelineSpacingEqual}</option>
+                <option value="time">{t.timelineSpacingTime}</option>
               </select>
             </label>
             <label className="field" htmlFor="main-node-type">

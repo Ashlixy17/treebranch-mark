@@ -106,6 +106,12 @@ export class SvgRenderer implements SvgRendererContract {
         svg.child('circle', {
           cx: node.x,
           cy: node.y,
+          r: AVATAR_RING_RADIUS + DEFAULT_EDGE_STROKE_WIDTH,
+          fill: '#f8fafc',
+        })
+        svg.child('circle', {
+          cx: node.x,
+          cy: node.y,
           r: AVATAR_RING_RADIUS,
           fill: 'none',
           stroke: nodeColor,

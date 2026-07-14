@@ -14,6 +14,7 @@ export type {
   LayoutResult,
   TimelineGrouping,
   TimelineLayoutOptions,
+  TimelineSpacing,
   TreeLayout as TreeLayoutContract,
 } from './types'
 export { BRANCH_LANE_GAP, COMMIT_COLUMN_GAP } from './types'

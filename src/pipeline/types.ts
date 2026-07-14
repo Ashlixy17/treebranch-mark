@@ -4,7 +4,7 @@ import type {
   ForkTimelineGraphBuilderContract,
   MainNodeMode,
 } from '../graph'
-import type { ForkTimelineLayoutResult, Layout, TimelineGrouping } from '../layout'
+import type { ForkTimelineLayoutResult, Layout, TimelineGrouping, TimelineSpacing } from '../layout'
 import type { CommitParserContract, ParserWarning } from '../parser'
 import type { RenderModel, RenderModelBuilderContract } from '../render-model'
 import type { SvgRendererContract } from '../renderer'
@@ -33,6 +33,7 @@ export interface RenderPipeline<TInput = GitSourceInput> {
 
 export interface ForkTimelineSettings {
   grouping: TimelineGrouping
+  spacing?: TimelineSpacing
   mainNodeMode: MainNodeMode
   includeOpenPullRequests: boolean
   pullRequestLimit: 10 | 20 | 50

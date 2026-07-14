@@ -37,13 +37,16 @@ export interface Layout {
 }
 
 export type TimelineGrouping = 'year' | 'month' | 'day'
+export type TimelineSpacing = 'equal' | 'time'
 
 export interface TimelineLayoutOptions {
   grouping?: TimelineGrouping
+  spacing?: TimelineSpacing
 }
 
 export interface ForkTimelineLayoutOptions {
   grouping?: TimelineGrouping
+  spacing?: TimelineSpacing
 }
 
 export interface ForkTimelineLayoutNode extends LayoutNode {

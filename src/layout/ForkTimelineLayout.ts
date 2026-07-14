@@ -12,6 +12,7 @@ import type {
   ForkTimelineLaneLabel,
   LayoutGroup,
   TimelineGrouping,
+  TimelineSpacing,
 } from './types'
 
 const MAIN_COLOR = '#2563eb'
@@ -25,6 +26,8 @@ const PR_COLORS = [
   '#dc2626',
   '#4f46e5',
 ]
+const TIME_PIXELS_PER_DAY = 28
+const MIN_TIME_NODE_GAP = 28
 
 interface TimelineItem {
   id: string
@@ -48,9 +51,11 @@ interface LaneAssignment {
 
 export class ForkTimelineLayout {
   private readonly grouping: TimelineGrouping
+  private readonly spacing: TimelineSpacing
 
   constructor(options: ForkTimelineLayoutOptions = {}) {
     this.grouping = options.grouping ?? 'month'
+    this.spacing = options.spacing ?? 'equal'
   }
 
   layout(graph: ForkTimelineGraph): ForkTimelineLayoutResult {
@@ -58,7 +63,7 @@ export class ForkTimelineLayout {
     const colors = assignColors(graph)
     const items = collectItems(graph, laneAssignments, colors)
     const orderedItems = [...items].sort(compareItems)
-    const xById = new Map(orderedItems.map((item, index) => [item.id, index * COMMIT_COLUMN_GAP]))
+    const xById = createXById(orderedItems, this.spacing)
     const nodes = orderedItems.map((item) => ({
       id: item.id,
       x: xById.get(item.id) ?? 0,
@@ -80,6 +85,41 @@ export class ForkTimelineLayout {
       laneLabels: createLaneLabels(graph, laneAssignments, xById, colors),
     }
   }
+}
+
+function createXById(items: TimelineItem[], spacing: TimelineSpacing): Map<string, number> {
+  if (spacing === 'equal') {
+    return new Map(items.map((item, index) => [item.id, index * COMMIT_COLUMN_GAP]))
+  }
+
+  const xById = new Map<string, number>()
+  const firstTimestamp = timestamp(items[0]?.commit)
+  let previousTimestamp = firstTimestamp
+  let previousX = 0
+
+  items.forEach((item, index) => {
+    const currentTimestamp = timestamp(item.commit)
+    if (index === 0) {
+      xById.set(item.id, 0)
+      previousTimestamp = currentTimestamp
+      return
+    }
+
+    const elapsedDays = Number.isFinite(currentTimestamp) && Number.isFinite(firstTimestamp)
+      ? Math.max(0, (currentTimestamp - firstTimestamp) / 86_400_000)
+      : 0
+    const candidateX = elapsedDays * TIME_PIXELS_PER_DAY
+    const sameOrInvalidTime = !Number.isFinite(currentTimestamp) ||
+      !Number.isFinite(previousTimestamp) ||
+      currentTimestamp <= previousTimestamp
+    previousX = sameOrInvalidTime
+      ? previousX + MIN_TIME_NODE_GAP
+      : Math.max(candidateX, previousX + MIN_TIME_NODE_GAP)
+    xById.set(item.id, previousX)
+    previousTimestamp = currentTimestamp
+  })
+
+  return xById
 }
 
 function collectItems(

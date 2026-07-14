@@ -34,7 +34,10 @@ export class ForkTimelinePipeline<TInput = GitSourceInput> implements ForkTimeli
       includeOpenPullRequests: settings.includeOpenPullRequests,
       pullRequestLimit: settings.pullRequestLimit,
     })
-    const layout = new ForkTimelineLayout({ grouping: settings.grouping }).layout(graphResult.graph)
+    const layout = new ForkTimelineLayout({
+      grouping: settings.grouping,
+      spacing: settings.spacing,
+    }).layout(graphResult.graph)
     const model = this.dependencies.renderModelBuilder.build(layout)
 
     return {
