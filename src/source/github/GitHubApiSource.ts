@@ -61,6 +61,10 @@ export class GitHubApiSource implements GitSource {
     const cacheKey = createGitHubSnapshotCacheKey(input)
     const requested = input.options?.pullRequestBranchLimit ?? DEFAULT_PULL_REQUEST_BRANCH_LIMIT
     const cachedSnapshot = this.cache.get(cacheKey)
+    const requestedBranch = input.branch?.trim()
+    const cachedBranchMatchesRequest = !requestedBranch || cachedSnapshot?.branches.some(
+      (branch) => branch.name === requestedBranch,
+    )
 
     const needsPullRequestCommits = input.options?.includePullRequestCommits !== false
     const cachedPullRequestCommitsLoaded = cachedSnapshot?.pullRequests.every(
@@ -68,13 +72,16 @@ export class GitHubApiSource implements GitSource {
     )
     if (
       cachedSnapshot &&
+      cachedBranchMatchesRequest &&
       cachedSnapshot.pullRequestCapacity.requested >= requested &&
       (!needsPullRequestCommits || cachedPullRequestCommitsLoaded)
     ) {
       return cachedSnapshot
     }
 
-    const baseSnapshot = cachedSnapshot ?? (await this.loadBaseSnapshot(input, requested))
+    const baseSnapshot = cachedSnapshot && cachedBranchMatchesRequest
+      ? cachedSnapshot
+      : await this.loadBaseSnapshot(input, requested)
     const snapshot = await this.enrichPullRequestCapacity(baseSnapshot, input, requested)
 
     this.cache.set(cacheKey, snapshot, this.cacheTtlMs)
