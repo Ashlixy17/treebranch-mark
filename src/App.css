@@ -477,6 +477,8 @@ h2 {
   color: #334155;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .confirm-generation-button {
@@ -520,6 +522,7 @@ h2 {
 .snapshot {
   display: grid;
   gap: 16px;
+  min-width: 0;
 }
 
 .metric-grid {
@@ -567,6 +570,7 @@ h2 {
 .svg-panel,
 .json-panel {
   padding: 18px;
+  min-width: 0;
 }
 
 .panel-heading {
@@ -628,6 +632,7 @@ h2 {
 .svg-preview {
   overflow: hidden;
   position: relative;
+  min-width: 0;
   cursor: grab;
   touch-action: none;
   color: #1d4ed8;
@@ -639,6 +644,7 @@ h2 {
 
 .svg-preview-content {
   width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   padding: 24px;
   transform-origin: 0 0;
