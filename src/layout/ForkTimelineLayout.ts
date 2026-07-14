@@ -199,9 +199,12 @@ function createEdges(
 ): ForkTimelineLayoutEdge[] {
   const edges: ForkTimelineLayoutEdge[] = []
 
-  for (let index = 1; index < graph.mainEvents.length; index += 1) {
-    const from = graph.mainEvents[index - 1]
-    const to = graph.mainEvents[index]
+  const visibleMainEvents = graph.mainEvents.filter(
+    (event) => event.visibleKind !== null || event.junction,
+  )
+  for (let index = 1; index < visibleMainEvents.length; index += 1) {
+    const from = visibleMainEvents[index - 1]
+    const to = visibleMainEvents[index]
     edges.push({
       id: `main-${from.id}-${to.id}`,
       from: from.id,
@@ -209,7 +212,12 @@ function createEdges(
       kind: 'main',
       color: MAIN_COLOR,
       inferred: false,
-      path: null,
+      path: pathBetween(
+        xById.get(from.id) ?? 0,
+        0,
+        xById.get(to.id) ?? 0,
+        0,
+      ),
     })
   }
 

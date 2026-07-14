@@ -360,6 +360,9 @@ function App() {
   const apiRemaining = rateLimitStatus && rateLimitStatus.remaining !== null && rateLimitStatus.limit !== null
       ? `${t.remaining}: ${rateLimitStatus.remaining} / ${rateLimitStatus.limit}`
       : null
+  const apiRemainingPercent = rateLimitStatus && rateLimitStatus.remaining !== null && rateLimitStatus.limit
+    ? Math.max(0, Math.min(100, (rateLimitStatus.remaining / rateLimitStatus.limit) * 100))
+    : null
   const fetchedAt = snapshot
     ? new Intl.DateTimeFormat(language, {
         dateStyle: 'medium',
@@ -464,8 +467,6 @@ function App() {
     setSnapshot(null)
     setSvg(null)
     setWarnings([])
-    setRateLimitStatus(null)
-
     let source: GitHubApiSource | null = null
 
     try {
@@ -499,9 +500,9 @@ function App() {
       setSnapshot(result.snapshot)
       setSvg(result.svg)
       setWarnings(result.warnings)
-      setRateLimitStatus(source.getRateLimitStatus())
+      setRateLimitStatus(source.getRateLimitStatus() ?? rateLimitStatus)
     } catch (caughtError) {
-      setRateLimitStatus(source?.getRateLimitStatus() ?? null)
+      setRateLimitStatus(source?.getRateLimitStatus() ?? rateLimitStatus)
 
       if (caughtError instanceof GitSourceError) {
         setErrorCode(caughtError.code)
@@ -564,6 +565,18 @@ function App() {
               <span>{t.apiStatus}</span>
               <strong>{apiAuthentication}</strong>
               {apiRemaining && <span>{apiRemaining}</span>}
+              {apiRemainingPercent !== null && (
+                <div
+                  className="api-progress"
+                  role="progressbar"
+                  aria-label={apiRemaining ?? t.apiStatus}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(apiRemainingPercent)}
+                >
+                  <span style={{ width: `${apiRemainingPercent}%` }} />
+                </div>
+              )}
             </div>
           </div>
         </header>

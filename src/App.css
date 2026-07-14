@@ -238,6 +238,22 @@ h2 {
   line-height: 1.3;
 }
 
+.api-progress {
+  width: 100%;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.api-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+  transition: width 220ms ease;
+}
+
 .control-panel,
 .panel,
 .svg-panel,
@@ -736,6 +752,14 @@ h2 {
 
 .app-shell[data-theme='dark'] .svg-preview {
   color: #60a5fa;
+}
+
+.app-shell[data-theme='dark'] .api-progress {
+  background: #1e293b;
+}
+
+.app-shell[data-theme='dark'] .api-progress span {
+  background: linear-gradient(90deg, #22c55e, #4ade80);
 }
 
 .app-shell[data-theme='dark'] .svg-toolbar button {
