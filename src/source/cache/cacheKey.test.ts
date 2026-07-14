@@ -9,7 +9,7 @@ describe('createGitHubSnapshotCacheKey', () => {
         repo: 'Core',
         branch: 'main',
       }),
-    ).toBe('github:vuejs/core:main:100:true:true:false')
+    ).toBe('github:vuejs/core:main:100:true:true:false:false')
   })
 
   it('changes when repository or query options change', () => {
@@ -42,5 +42,25 @@ describe('createGitHubSnapshotCacheKey', () => {
     ]
 
     expect(new Set(keys)).toHaveLength(keys.length)
+  })
+
+  it('keeps the repository cache key stable when only PR capacity changes', () => {
+    const input = {
+      owner: 'vuejs',
+      repo: 'core',
+      branch: 'main',
+    }
+
+    expect(
+      createGitHubSnapshotCacheKey({
+        ...input,
+        options: { pullRequestBranchLimit: 10 },
+      }),
+    ).toBe(
+      createGitHubSnapshotCacheKey({
+        ...input,
+        options: { pullRequestBranchLimit: 50 },
+      }),
+    )
   })
 })

@@ -86,6 +86,14 @@ export class GitHubApiSource implements GitSource {
       pullRequests: pullRequests
         .filter((pullRequest) => pullRequest.merged_at !== null)
         .map(normalizePullRequest),
+      releases: [],
+      tags: [],
+      warnings: [],
+      pullRequestCapacity: {
+        requested: input.options?.pullRequestBranchLimit ?? 20,
+        mergedLoaded: pullRequests.filter((pullRequest) => pullRequest.merged_at !== null).length,
+        openLoaded: 0,
+      },
       fetchedAt: new Date().toISOString(),
     }
 
@@ -171,13 +179,20 @@ function normalizePullRequest(pullRequest: GitHubPullRequestResponse): GitPullRe
   return {
     number: pullRequest.number,
     title: pullRequest.title,
-    state: 'closed',
+    state: 'merged',
     url: pullRequest.html_url,
     authorLogin: pullRequest.user?.login ?? null,
+    authorAvatarUrl: pullRequest.user?.avatar_url ?? null,
     createdAt: pullRequest.created_at,
-    mergedAt: pullRequest.merged_at ?? '',
+    updatedAt: pullRequest.updated_at,
+    mergedAt: pullRequest.merged_at,
     baseBranch: pullRequest.base.ref,
     headBranch: pullRequest.head.ref,
+    headRepositoryFullName: pullRequest.head.repo?.full_name ?? '',
+    headSha: pullRequest.head.sha,
     mergeCommitSha: pullRequest.merge_commit_sha,
+    commits: [],
+    loadState: 'metadata',
+    truncated: false,
   }
 }

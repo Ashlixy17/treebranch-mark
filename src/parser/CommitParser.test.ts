@@ -147,6 +147,10 @@ function snapshotFixture(commits: GitCommit[]): GitSourceSnapshot {
     commits,
     contributors: [],
     pullRequests: [],
+    releases: [],
+    tags: [],
+    warnings: [],
+    pullRequestCapacity: { requested: 20, mergedLoaded: 0, openLoaded: 0 },
     fetchedAt: '2026-01-01T00:00:00Z',
   }
 }

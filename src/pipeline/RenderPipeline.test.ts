@@ -207,6 +207,10 @@ function snapshotFixture(overrides: Partial<GitSourceSnapshot> = {}): GitSourceS
     ],
     contributors: [],
     pullRequests: [],
+    releases: [],
+    tags: [],
+    warnings: [],
+    pullRequestCapacity: { requested: 20, mergedLoaded: 0, openLoaded: 0 },
     fetchedAt: '2026-01-03T00:00:00Z',
     ...overrides,
   }

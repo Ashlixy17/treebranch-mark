@@ -19,6 +19,8 @@ export interface GitSourceOptions {
   includePullRequests?: boolean
   includeContributors?: boolean
   includeTags?: boolean
+  includeReleases?: boolean
+  pullRequestBranchLimit?: GitPullRequestBranchLimit
 }
 
 export interface GitSourceSnapshot {
@@ -28,6 +30,10 @@ export interface GitSourceSnapshot {
   commits: GitCommit[]
   contributors: GitContributor[]
   pullRequests: GitPullRequest[]
+  releases: GitRelease[]
+  tags: GitTag[]
+  warnings: GitSourceWarning[]
+  pullRequestCapacity: GitPullRequestCapacity
   fetchedAt: string
 }
 
@@ -78,14 +84,60 @@ export interface GitContributor {
 export interface GitPullRequest {
   number: number
   title: string
-  state: 'closed'
+  state: GitPullRequestState
   url: string
   authorLogin: string | null
+  authorAvatarUrl: string | null
   createdAt: string
-  mergedAt: string
+  updatedAt: string
+  mergedAt: string | null
   baseBranch: string
   headBranch: string
+  headRepositoryFullName: string
+  headSha: string
   mergeCommitSha: string | null
+  commits: GitCommit[]
+  loadState: GitPullRequestLoadState
+  truncated: boolean
+}
+
+export type GitPullRequestState = 'merged' | 'open'
+export type GitPullRequestLoadState = 'metadata' | 'complete' | 'partial'
+export type GitPullRequestBranchLimit = 10 | 20 | 50
+
+export interface GitRelease {
+  id: number
+  tagName: string
+  name: string | null
+  url: string
+  publishedAt: string
+  prerelease: boolean
+  targetSha: string | null
+  inferred: boolean
+}
+
+export interface GitTag {
+  name: string
+  commitSha: string
+  url: string | null
+}
+
+export type GitSourceWarningCode =
+  | 'pr-commits-unavailable'
+  | 'pr-commits-truncated'
+  | 'release-target-inferred'
+  | 'capacity-partial'
+
+export interface GitSourceWarning {
+  code: GitSourceWarningCode
+  message: string
+  pullRequestNumber?: number
+}
+
+export interface GitPullRequestCapacity {
+  requested: GitPullRequestBranchLimit
+  mergedLoaded: number
+  openLoaded: number
 }
 
 export type GitSourceErrorCode =

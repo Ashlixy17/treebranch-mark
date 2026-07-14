@@ -72,6 +72,10 @@ export class LocalGitSource implements GitSource<LocalGitSourceInput> {
       commits: dedupeCommits(commitGroups.flat()),
       contributors: [],
       pullRequests: [],
+      releases: [],
+      tags: [],
+      warnings: [],
+      pullRequestCapacity: { requested: 20, mergedLoaded: 0, openLoaded: 0 },
       fetchedAt: new Date().toISOString(),
     }
   }

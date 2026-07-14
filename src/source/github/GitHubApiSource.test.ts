@@ -69,14 +69,21 @@ describe('GitHubApiSource', () => {
       {
         number: 7,
         title: 'Merge feature',
-        state: 'closed',
+        state: 'merged',
         url: 'https://github.com/octo/repo/pull/7',
         authorLogin: 'mona',
+        authorAvatarUrl: 'https://avatars.githubusercontent.com/u/1',
         createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-02T00:00:00Z',
         mergedAt: '2026-01-02T00:00:00Z',
         baseBranch: 'main',
         headBranch: 'feature',
+        headRepositoryFullName: 'contributor/repo',
+        headSha: 'sha-feature',
         mergeCommitSha: 'sha-main',
+        commits: [],
+        loadState: 'metadata',
+        truncated: false,
       },
     ])
     expect(client.lastPerPage).toBe(25)
@@ -232,6 +239,42 @@ describe('GitHubApiSource', () => {
 })
 
 describe('GitHubRestClient errors', () => {
+  it('requests all pull requests and PR commits', async () => {
+    const urls: string[] = []
+    const client = new GitHubRestClient({
+      fetcher: async (input) => {
+        urls.push(String(input))
+        return new Response('[]', { status: 200 })
+      },
+    })
+
+    await client.listPullRequests('octo', 'repo')
+    await client.listPullRequestCommits('octo', 'repo', 7)
+
+    expect(urls).toEqual([
+      'https://api.github.com/repos/octo/repo/pulls?state=all&sort=updated&direction=desc&per_page=100',
+      'https://api.github.com/repos/octo/repo/pulls/7/commits?per_page=100',
+    ])
+  })
+
+  it('requests releases and tags', async () => {
+    const urls: string[] = []
+    const client = new GitHubRestClient({
+      fetcher: async (input) => {
+        urls.push(String(input))
+        return new Response('[]', { status: 200 })
+      },
+    })
+
+    await client.listReleases('octo', 'repo')
+    await client.listTags('octo', 'repo')
+
+    expect(urls).toEqual([
+      'https://api.github.com/repos/octo/repo/releases?per_page=100',
+      'https://api.github.com/repos/octo/repo/tags?per_page=100',
+    ])
+  })
+
   it('sends an authorization header when token is provided', async () => {
     const capturedHeaders: Headers[] = []
     const client = new GitHubRestClient({
@@ -536,12 +579,18 @@ const pullRequestsFixture: GitHubPullRequestResponse[] = [
       html_url: 'https://github.com/mona',
     },
     created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-02T00:00:00Z',
     merged_at: '2026-01-02T00:00:00Z',
     base: {
       ref: 'main',
     },
     head: {
       ref: 'feature',
+      sha: 'sha-feature',
+      repo: {
+        full_name: 'contributor/repo',
+        fork: true,
+      },
     },
     merge_commit_sha: 'sha-main',
   },
@@ -552,12 +601,18 @@ const pullRequestsFixture: GitHubPullRequestResponse[] = [
     html_url: 'https://github.com/octo/repo/pull/8',
     user: null,
     created_at: '2026-01-03T00:00:00Z',
+    updated_at: '2026-01-03T00:00:00Z',
     merged_at: null,
     base: {
       ref: 'main',
     },
     head: {
       ref: 'other',
+      sha: 'sha-other',
+      repo: {
+        full_name: 'contributor/repo',
+        fork: true,
+      },
     },
     merge_commit_sha: null,
   },

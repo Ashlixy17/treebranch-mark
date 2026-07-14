@@ -60,14 +60,41 @@ export interface GitHubPullRequestResponse {
   html_url: string
   user: GitHubUserResponse | null
   created_at: string
+  updated_at: string
   merged_at: string | null
   base: {
     ref: string
   }
   head: {
     ref: string
+    sha: string
+    repo: {
+      full_name: string
+      fork: boolean
+    } | null
   }
   merge_commit_sha: string | null
+}
+
+export interface GitHubReleaseResponse {
+  id: number
+  tag_name: string
+  name: string | null
+  html_url: string
+  published_at: string | null
+  prerelease: boolean
+  target_commitish: string
+  draft: boolean
+}
+
+export interface GitHubTagResponse {
+  name: string
+  zipball_url: string
+  tarball_url: string
+  commit: {
+    sha: string
+    url: string
+  }
 }
 
 interface GitHubUserResponse {
@@ -126,6 +153,28 @@ export class GitHubRestClient {
 
   listClosedPullRequests(owner: string, repo: string): Promise<GitHubPullRequestResponse[]> {
     return this.get(`/repos/${owner}/${repo}/pulls?state=closed&per_page=100`)
+  }
+
+  listPullRequests(owner: string, repo: string): Promise<GitHubPullRequestResponse[]> {
+    return this.get(
+      `/repos/${owner}/${repo}/pulls?state=all&sort=updated&direction=desc&per_page=100`,
+    )
+  }
+
+  listPullRequestCommits(
+    owner: string,
+    repo: string,
+    pullRequestNumber: number,
+  ): Promise<GitHubCommitResponse[]> {
+    return this.get(`/repos/${owner}/${repo}/pulls/${pullRequestNumber}/commits?per_page=100`)
+  }
+
+  listReleases(owner: string, repo: string): Promise<GitHubReleaseResponse[]> {
+    return this.get(`/repos/${owner}/${repo}/releases?per_page=100`)
+  }
+
+  listTags(owner: string, repo: string): Promise<GitHubTagResponse[]> {
+    return this.get(`/repos/${owner}/${repo}/tags?per_page=100`)
   }
 
   getRateLimitStatus(): GitHubRateLimitStatus | null {
