@@ -197,7 +197,7 @@ export class GitHubApiSource implements GitSource {
           loadState: truncated ? ('partial' as const) : ('complete' as const),
           truncated,
         }
-      } catch (error) {
+      } catch {
         const warning: GitSourceWarning = {
           code: 'pr-commits-unavailable',
           pullRequestNumber: pullRequest.number,
