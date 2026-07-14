@@ -550,14 +550,15 @@ function App() {
 
   function sourceInput(
     includePullRequestCommits: boolean,
-    branch = branchInput.trim() || undefined,
+    branch: string | null | undefined = branchInput.trim() || undefined,
     includeCommits = true,
     includeGraphMetadata = true,
   ): GitSourceInput {
     const repository = parseRepositoryInput(repositoryInput)
+    const resolvedBranch = branch === null ? undefined : branch
     return {
       ...repository,
-      branch,
+      branch: resolvedBranch,
       options: {
         maxCommitsPerBranch: 100,
         includeCommits,
@@ -635,7 +636,7 @@ function App() {
       })
       sourceRef.current = source
       pipelineRef.current = pipeline
-      const input = sourceInput(false, undefined, false, false)
+      const input = sourceInput(false, null, false, false)
       sourceInputRef.current = input
       const previewSnapshot = await source.loadRepository(input)
       const resolvedBranch = previewSnapshot.branches.find(
