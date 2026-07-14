@@ -1,4 +1,9 @@
 import type { BranchGraph } from '../graph'
+import type {
+  ForkTimelineLabel,
+  ForkTimelineNodeKind,
+} from '../graph'
+import type { GitCommit } from '../source'
 
 export const BRANCH_LANE_GAP = 100
 export const COMMIT_COLUMN_GAP = 120
@@ -35,6 +40,47 @@ export type TimelineGrouping = 'year' | 'month' | 'day'
 
 export interface TimelineLayoutOptions {
   grouping?: TimelineGrouping
+}
+
+export interface ForkTimelineLayoutOptions {
+  grouping?: TimelineGrouping
+}
+
+export interface ForkTimelineLayoutNode extends LayoutNode {
+  laneId: string
+  laneIndex: number
+  kind: ForkTimelineNodeKind | null
+  commit: GitCommit
+  labels: ForkTimelineLabel[]
+  junction: boolean
+  color: string
+}
+
+export interface ForkTimelineLayoutEdge {
+  id: string
+  from: string
+  to: string
+  kind: 'main' | 'branch' | 'fork' | 'merge'
+  color: string
+  inferred: boolean
+  path: string | null
+}
+
+export interface ForkTimelineLaneLabel {
+  id: string
+  x: number
+  y: number
+  text: string
+  color: string
+  url: string
+  badge: 'open' | null
+}
+
+export interface ForkTimelineLayoutResult {
+  nodes: ForkTimelineLayoutNode[]
+  edges: ForkTimelineLayoutEdge[]
+  groups: LayoutGroup[]
+  laneLabels: ForkTimelineLaneLabel[]
 }
 
 export type TreeLayout = Layout
