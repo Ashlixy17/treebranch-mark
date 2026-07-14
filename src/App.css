@@ -149,8 +149,11 @@
 
 .workspace {
   width: min(1180px, calc(100% - 40px));
+  max-width: 100%;
+  box-sizing: border-box;
   margin: 0 auto;
   padding: 36px 0 56px;
+  overflow-x: hidden;
 }
 
 .hero {
