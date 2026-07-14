@@ -632,9 +632,6 @@ function App() {
       sourceInputRef.current = input
       const previewSnapshot = await source.loadRepository(input)
       const resolvedBranch = previewSnapshot.branches[0]?.name
-      if (resolvedBranch && resolvedBranch !== input.branch) {
-        setBranchInput(resolvedBranch)
-      }
 
       setSnapshot(previewSnapshot)
       setSvg(null)
