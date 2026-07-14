@@ -275,7 +275,7 @@ h2 {
 
 .repo-form {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(120px, 180px);
+  grid-template-columns: minmax(280px, 1fr);
   align-items: start;
   gap: 12px;
 }
@@ -306,7 +306,7 @@ h2 {
 }
 
 .repo-form button {
-  grid-column: 1 / -1;
+  grid-column: 1;
   grid-row: 3;
   justify-self: center;
   min-width: 180px;
@@ -469,6 +469,19 @@ h2 {
 .generation-plan-summary dd {
   margin: 0;
   color: #0f172a;
+  font-weight: 800;
+}
+
+.generation-plan-summary select {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #93c5fd;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
   font-weight: 800;
 }
 
@@ -866,6 +879,12 @@ h2 {
 
 .app-shell[data-theme='dark'] .generation-plan-summary dd,
 .app-shell[data-theme='dark'] .planned-api-calls ul {
+  color: #dbeafe;
+}
+
+.app-shell[data-theme='dark'] .generation-plan-summary select {
+  border-color: #3b82f6;
+  background: #0f172a;
   color: #dbeafe;
 }
 

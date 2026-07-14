@@ -395,7 +395,8 @@ function App() {
   const t = translations[language]
   const statusKey: StatusKey = isLoading ? 'loading' : errorCode ? 'error' : snapshot ? 'ready' : 'idle'
   const latestCommit = snapshot?.commits[0]
-  const selectedBranch = snapshot?.branches[0]
+  const selectedBranch = snapshot?.branches.find((branch) => branch.name === branchInput) ??
+    snapshot?.branches[0]
   const errorMessage = errorCode ? formatSourceError(errorCode, t.errorMessages) : null
   const apiAuthentication = rateLimitStatus
     ? rateLimitStatus.authentication === 'authenticated'
@@ -547,18 +548,24 @@ function App() {
     }
   }
 
-  function sourceInput(includePullRequestCommits: boolean): GitSourceInput {
+  function sourceInput(
+    includePullRequestCommits: boolean,
+    branch = branchInput.trim() || undefined,
+    includeCommits = true,
+    includeGraphMetadata = true,
+  ): GitSourceInput {
     const repository = parseRepositoryInput(repositoryInput)
     return {
       ...repository,
-      branch: branchInput.trim() || undefined,
+      branch,
       options: {
         maxCommitsPerBranch: 100,
+        includeCommits,
         includeContributors: true,
         includePullRequests: true,
         includePullRequestCommits,
-        includeReleases: mainNodeMode !== 'commit',
-        includeTags: mainNodeMode !== 'commit',
+        includeReleases: includeGraphMetadata && mainNodeMode !== 'commit',
+        includeTags: includeGraphMetadata && mainNodeMode !== 'commit',
         pullRequestBranchLimit: pullRequestLimit,
       },
     }
@@ -628,19 +635,31 @@ function App() {
       })
       sourceRef.current = source
       pipelineRef.current = pipeline
-      const input = sourceInput(false)
+      const input = sourceInput(false, undefined, false, false)
       sourceInputRef.current = input
       const previewSnapshot = await source.loadRepository(input)
-      const resolvedBranch = previewSnapshot.branches[0]?.name
+      const resolvedBranch = previewSnapshot.branches.find(
+        (branch) => branch.name === previewSnapshot.repository.defaultBranch,
+      )?.name ?? previewSnapshot.branches[0]?.name
 
+      setBranchInput(previewSnapshot.repository.defaultBranch)
       setSnapshot(previewSnapshot)
       setSvg(null)
       setWarnings(previewSnapshot.warnings.map((warning) => ({
         message: warning.message,
         pullRequestNumber: warning.pullRequestNumber,
       })))
+      const plannedInput = {
+        ...input,
+        branch: previewSnapshot.repository.defaultBranch,
+        options: {
+          ...input.options,
+          includeReleases: mainNodeMode !== 'commit',
+          includeTags: mainNodeMode !== 'commit',
+        },
+      }
       setGenerationPlan({
-        ...planFor(input, true),
+        ...planFor(plannedInput, true),
         branch: resolvedBranch ?? input.branch ?? 'default branch',
       })
       setAwaitingConfirmation(true)
@@ -669,9 +688,13 @@ function App() {
     try {
       const input: GitSourceInput = {
         ...sourceInputRef.current,
+        branch: branchInput.trim() || sourceInputRef.current.branch,
         options: {
           ...sourceInputRef.current.options,
+          includeCommits: true,
           includePullRequestCommits: true,
+          includeReleases: mainNodeMode !== 'commit',
+          includeTags: mainNodeMode !== 'commit',
         },
       }
       sourceInputRef.current = input
@@ -789,18 +812,6 @@ function App() {
                 placeholder="owner/repo"
               />
             </label>
-            <label className="field branch-field" htmlFor="branch">
-              <span>{t.branch}</span>
-              <input
-                id="branch"
-                value={branchInput}
-                onChange={(event) => {
-                  setBranchInput(event.target.value)
-                  invalidatePreflight(true)
-                }}
-                placeholder="main"
-              />
-            </label>
             <button type="submit" disabled={isLoading}>
               {isLoading ? t.status.loading : t.preflightRepository}
             </button>
@@ -900,7 +911,33 @@ function App() {
               </div>
               <div>
                 <dt>{t.branch}</dt>
-                <dd>{generationPlan.branch}</dd>
+                <dd>
+                  <select
+                    id="generation-branch"
+                    value={branchInput}
+                    onChange={(event) => {
+                      const nextBranch = event.target.value
+                      setBranchInput(nextBranch)
+                      if (sourceInputRef.current) {
+                        setGenerationPlan(planFor({
+                          ...sourceInputRef.current,
+                          branch: nextBranch,
+                          options: {
+                            ...sourceInputRef.current.options,
+                            includeReleases: mainNodeMode !== 'commit',
+                            includeTags: mainNodeMode !== 'commit',
+                          },
+                        }, true))
+                      }
+                    }}
+                  >
+                    {snapshot?.branches.map((branch) => (
+                      <option key={branch.name} value={branch.name}>
+                        {branch.name}
+                      </option>
+                    ))}
+                  </select>
+                </dd>
               </div>
             </dl>
             <div className="planned-api-calls">

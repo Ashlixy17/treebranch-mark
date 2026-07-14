@@ -108,11 +108,13 @@ export class GitHubApiSource implements GitSource {
         : fallbackBranch
           ? [fallbackBranch]
           : branches
-    const commitGroups = await Promise.all(
-      selectedBranches.map((branch) =>
-        this.client.listCommits(input.owner, input.repo, branch.name, maxCommitsPerBranch),
-      ),
-    )
+    const commitGroups = input.options?.includeCommits === false
+      ? selectedBranches.map(() => [])
+      : await Promise.all(
+          selectedBranches.map((branch) =>
+            this.client.listCommits(input.owner, input.repo, branch.name, maxCommitsPerBranch),
+          ),
+        )
     const [contributors, pullRequestResponses, releaseResponses, tagResponses] = await Promise.all([
       input.options?.includeContributors === false
         ? Promise.resolve([])
