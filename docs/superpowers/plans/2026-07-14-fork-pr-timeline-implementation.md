@@ -92,7 +92,7 @@ it('requests all pull requests and PR commits', async () => {
 
   expect(urls).toEqual([
     'https://api.github.com/repos/octo/repo/pulls?state=all&sort=updated&direction=desc&per_page=100',
-    'https://api.github.com/repos/octo/repo/pulls/7/commits?per_page=100',
+      'https://api.github.com/repos/octo/repo/pulls/7/commits?per_page=250',
   ])
 })
 
@@ -242,7 +242,7 @@ Expected: FAIL because the module does not exist.
 
 - [ ] **Step 3: Implement the pure selector**
 
-Implement:
+Implement (the PR endpoint supports up to 250 commits per response):
 
 ```ts
 export interface PullRequestSelectionContext {

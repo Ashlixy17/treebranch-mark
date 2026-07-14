@@ -166,7 +166,7 @@ export class GitHubRestClient {
     repo: string,
     pullRequestNumber: number,
   ): Promise<GitHubCommitResponse[]> {
-    return this.get(`/repos/${owner}/${repo}/pulls/${pullRequestNumber}/commits?per_page=100`)
+    return this.get(`/repos/${owner}/${repo}/pulls/${pullRequestNumber}/commits?per_page=250`)
   }
 
   listReleases(owner: string, repo: string): Promise<GitHubReleaseResponse[]> {
