@@ -17,6 +17,7 @@ export type GitSourceInput = GitHubSourceInput
 export interface GitSourceOptions {
   maxCommitsPerBranch?: number
   includePullRequests?: boolean
+  includePullRequestCommits?: boolean
   includeContributors?: boolean
   includeTags?: boolean
   includeReleases?: boolean

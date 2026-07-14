@@ -418,6 +418,10 @@ describe('App GitHub token input', () => {
         ], 200, rateLimitHeaders)
       }
 
+      if (url.includes('/repos/vuejs/core/contributors?')) {
+        return jsonResponse([], 200, rateLimitHeaders)
+      }
+
       if (url.includes('/repos/vuejs/core/pulls?') || url.includes('/repos/vuejs/core/releases?') || url.includes('/repos/vuejs/core/tags?')) {
         return jsonResponse([], 200, rateLimitHeaders)
       }
@@ -618,6 +622,13 @@ async function submitRepositoryForm() {
   await act(async () => {
     form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
   })
+
+  const confirmButton = document.querySelector<HTMLButtonElement>('.confirm-generation-button')
+  if (confirmButton) {
+    await act(async () => {
+      confirmButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+  }
 }
 
 function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
@@ -691,6 +702,10 @@ function fixtureResponseFor(input: RequestInfo | URL): Response {
         parents: [],
       },
     ])
+  }
+
+  if (url.includes('/repos/vuejs/core/contributors?')) {
+    return jsonResponse([])
   }
 
   if (url.includes('/repos/vuejs/core/pulls?') || url.includes('/repos/vuejs/core/releases?') || url.includes('/repos/vuejs/core/tags?')) {

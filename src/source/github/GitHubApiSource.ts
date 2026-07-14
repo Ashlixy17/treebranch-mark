@@ -62,7 +62,15 @@ export class GitHubApiSource implements GitSource {
     const requested = input.options?.pullRequestBranchLimit ?? DEFAULT_PULL_REQUEST_BRANCH_LIMIT
     const cachedSnapshot = this.cache.get(cacheKey)
 
-    if (cachedSnapshot && cachedSnapshot.pullRequestCapacity.requested >= requested) {
+    const needsPullRequestCommits = input.options?.includePullRequestCommits !== false
+    const cachedPullRequestCommitsLoaded = cachedSnapshot?.pullRequests.every(
+      (pullRequest) => pullRequest.loadState !== 'metadata',
+    )
+    if (
+      cachedSnapshot &&
+      cachedSnapshot.pullRequestCapacity.requested >= requested &&
+      (!needsPullRequestCommits || cachedPullRequestCommitsLoaded)
+    ) {
       return cachedSnapshot
     }
 
@@ -105,6 +113,20 @@ export class GitHubApiSource implements GitSource {
     ])
 
     const normalizedCommitGroups = commitGroups.map((group) => group.map(normalizeCommit))
+    const capacityWarnings: GitSourceWarning[] = normalizedCommitGroups.flatMap((group) =>
+      group.length >= maxCommitsPerBranch
+        ? [{
+            code: 'capacity-partial' as const,
+            message: 'The selected branch reached the commit page limit; older commits may be truncated.',
+          }]
+        : [],
+    )
+    if (pullRequestResponses.length >= 100) {
+      capacityWarnings.push({
+        code: 'capacity-partial',
+        message: 'The repository reached the pull-request page limit; some pull requests may be omitted.',
+      })
+    }
     const mainBranchName = input.branch ?? repository.default_branch
     const mainBranchIndex = selectedBranches.findIndex((branch) => branch.name === mainBranchName)
     const mainCommits = normalizedCommitGroups[mainBranchIndex] ?? normalizedCommitGroups.flat()
@@ -134,7 +156,7 @@ export class GitHubApiSource implements GitSource {
       pullRequests,
       releases: releaseResult.releases,
       tags,
-      warnings: releaseResult.warnings,
+      warnings: [...capacityWarnings, ...releaseResult.warnings],
       pullRequestCapacity: {
         requested,
         mergedLoaded: 0,
@@ -149,7 +171,11 @@ export class GitHubApiSource implements GitSource {
     input: GitSourceInput,
     requested: GitPullRequestBranchLimit,
   ): Promise<GitSourceSnapshot> {
-    if (input.options?.includePullRequests === false || snapshot.pullRequests.length === 0) {
+    if (
+      input.options?.includePullRequests === false ||
+      input.options?.includePullRequestCommits === false ||
+      snapshot.pullRequests.length === 0
+    ) {
       return {
         ...snapshot,
         pullRequestCapacity: {

@@ -28,6 +28,12 @@ type StatusKey = 'idle' | 'loading' | 'error' | 'ready'
 type Theme = 'light' | 'dark'
 export const GITHUB_TOKEN_STORAGE_KEY = 'treebranch.github.token'
 
+interface GenerationPlan {
+  repository: string
+  branch: string
+  apiCalls: string[]
+}
+
 interface Translation {
   application: string
   sourceLayer: string
@@ -60,6 +66,12 @@ interface Translation {
   pullRequestBranches: string
   partialData: string
   generateGraph: string
+  preflightRepository: string
+  confirmGenerateGraph: string
+  generationPlan: string
+  plannedApiCalls: string
+  preflightHint: string
+  largeDataWarning: string
   requestFailed: string
   snapshotSummary: string
   branches: string
@@ -133,6 +145,12 @@ const translations = {
     pullRequestBranches: 'PR branches',
     partialData: 'Some data is partial',
     generateGraph: 'Generate SVG',
+    preflightRepository: 'Check repository',
+    confirmGenerateGraph: 'Confirm and generate SVG',
+    generationPlan: 'Generation plan',
+    plannedApiCalls: 'Planned API calls',
+    preflightHint: 'Review the selected repository, graph settings, and API calls before generating.',
+    largeDataWarning: 'Large repositories may exceed API page limits. Some commits or pull-request histories may be truncated.',
     requestFailed: 'Request failed',
     snapshotSummary: 'Git source snapshot summary',
     branches: 'Branches',
@@ -209,6 +227,12 @@ const translations = {
     pullRequestBranches: 'PR 分支数量',
     partialData: '部分数据未完整加载',
     generateGraph: '生成 SVG',
+    preflightRepository: '检查仓库',
+    confirmGenerateGraph: '确认并生成 SVG',
+    generationPlan: '生成计划',
+    plannedApiCalls: '计划调用的 API',
+    preflightHint: '请先检查仓库、图形设置和 API 调用，确认后再生成。',
+    largeDataWarning: '大型仓库可能超过 API 分页限制，部分提交或 PR 历史可能被截断。',
     requestFailed: '请求失败',
     snapshotSummary: 'Git Source 快照摘要',
     branches: '分支',
@@ -285,6 +309,12 @@ const translations = {
     pullRequestBranches: 'PR ブランチ数',
     partialData: '一部のデータが未完了です',
     generateGraph: 'SVG を生成',
+    preflightRepository: 'リポジトリを確認',
+    confirmGenerateGraph: '確認して SVG を生成',
+    generationPlan: '生成プラン',
+    plannedApiCalls: '予定する API 呼び出し',
+    preflightHint: 'リポジトリ、設定、API 呼び出しを確認してから生成してください。',
+    largeDataWarning: '大規模なリポジトリでは API ページ制限により、コミットや PR 履歴が切り詰められる場合があります。',
     requestFailed: 'リクエスト失敗',
     snapshotSummary: 'Git Source スナップショット概要',
     branches: 'ブランチ',
@@ -343,6 +373,8 @@ function App() {
   const [errorCode, setErrorCode] = useState<GitSourceErrorCode | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isEnriching, setIsEnriching] = useState(false)
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false)
+  const [generationPlan, setGenerationPlan] = useState<GenerationPlan | null>(null)
   const [snapshotCache] = useState(() => new MemoryCache<GitSourceSnapshot>())
   const pipelineRef = useRef<ForkTimelinePipeline<GitSourceInput> | null>(null)
   const sourceRef = useRef<GitHubApiSource | null>(null)
@@ -378,8 +410,23 @@ function App() {
     }
   }, [])
 
+  function invalidatePreflight(clearSnapshot = false) {
+    if (!awaitingConfirmation) {
+      return
+    }
+
+    setAwaitingConfirmation(false)
+    setGenerationPlan(null)
+    setSvg(null)
+    if (clearSnapshot) {
+      setSnapshot(null)
+      setWarnings([])
+    }
+  }
+
   function handleTokenChange(value: string) {
     setGithubToken(value)
+    invalidatePreflight(true)
 
     const trimmed = value.trim()
 
@@ -392,21 +439,46 @@ function App() {
 
   function handleTimelineGroupingChange(grouping: TimelineGrouping) {
     setTimelineGrouping(grouping)
+    if (awaitingConfirmation) {
+      setAwaitingConfirmation(false)
+      setGenerationPlan(null)
+      setSvg(null)
+      return
+    }
     redraw({ ...currentSettings(), grouping })
   }
 
   function handleMainNodeModeChange(mainNodeMode: MainNodeMode) {
     setMainNodeMode(mainNodeMode)
+    if (awaitingConfirmation) {
+      setAwaitingConfirmation(false)
+      setGenerationPlan(null)
+      setSvg(null)
+      return
+    }
     redraw({ ...currentSettings(), mainNodeMode })
   }
 
   function handleIncludeOpenPullRequestsChange(includeOpenPullRequests: boolean) {
     setIncludeOpenPullRequests(includeOpenPullRequests)
+    if (awaitingConfirmation) {
+      setAwaitingConfirmation(false)
+      setGenerationPlan(null)
+      setSvg(null)
+      return
+    }
     redraw({ ...currentSettings(), includeOpenPullRequests })
   }
 
   async function handlePullRequestLimitChange(nextLimit: GitPullRequestBranchLimit) {
     setPullRequestLimit(nextLimit)
+
+    if (awaitingConfirmation) {
+      setAwaitingConfirmation(false)
+      setGenerationPlan(null)
+      setSvg(null)
+      return
+    }
 
     if (!snapshot || !sourceInputRef.current || !pipelineRef.current || nextLimit <= snapshot.pullRequestCapacity.requested) {
       redraw({ ...currentSettings(), pullRequestLimit: nextLimit })
@@ -450,6 +522,54 @@ function App() {
     }
   }
 
+  function sourceInput(includePullRequestCommits: boolean): GitSourceInput {
+    const repository = parseRepositoryInput(repositoryInput)
+    return {
+      ...repository,
+      branch: branchInput.trim() || undefined,
+      options: {
+        maxCommitsPerBranch: 100,
+        includeContributors: true,
+        includePullRequests: true,
+        includePullRequestCommits,
+        includeReleases: mainNodeMode !== 'commit',
+        includeTags: mainNodeMode !== 'commit',
+        pullRequestBranchLimit: pullRequestLimit,
+      },
+    }
+  }
+
+  function planFor(input: GitSourceInput, includePullRequestCommits: boolean): GenerationPlan {
+    const branch = input.branch ?? 'default branch'
+    const apiCalls = [
+      'GET /repos/' + input.owner + '/' + input.repo,
+      'GET /repos/' + input.owner + '/' + input.repo + '/branches',
+      'GET /repos/' + input.owner + '/' + input.repo + '/commits?sha=' + branch,
+      'GET /repos/' + input.owner + '/' + input.repo + '/contributors',
+      'GET /repos/' + input.owner + '/' + input.repo + '/pulls?state=all',
+    ]
+
+    if (input.options?.includeReleases) {
+      apiCalls.push('GET /repos/' + input.owner + '/' + input.repo + '/releases')
+    }
+    if (input.options?.includeTags) {
+      apiCalls.push('GET /repos/' + input.owner + '/' + input.repo + '/tags')
+    }
+    if (includePullRequestCommits) {
+      const openText = includeOpenPullRequests ? 'merged + open' : 'merged'
+      apiCalls.push(
+        'GET /repos/' + input.owner + '/' + input.repo + '/pulls/{number}/commits (' +
+          openText + ', up to ' + pullRequestLimit + ' each)',
+      )
+    }
+
+    return {
+      repository: input.owner + '/' + input.repo,
+      branch,
+      apiCalls,
+    }
+  }
+
   function redraw(settings: ForkTimelineSettings) {
     if (!snapshot || !pipelineRef.current) {
       return
@@ -467,6 +587,8 @@ function App() {
     setSnapshot(null)
     setSvg(null)
     setWarnings([])
+    setAwaitingConfirmation(false)
+    setGenerationPlan(null)
     let source: GitHubApiSource | null = null
 
     try {
@@ -481,28 +603,59 @@ function App() {
       })
       sourceRef.current = source
       pipelineRef.current = pipeline
-      const repository = parseRepositoryInput(repositoryInput)
+      const input = sourceInput(false)
+      sourceInputRef.current = input
+      const previewSnapshot = await source.loadRepository(input)
+
+      setSnapshot(previewSnapshot)
+      setSvg(null)
+      setWarnings(previewSnapshot.warnings.map((warning) => ({
+        message: warning.message,
+        pullRequestNumber: warning.pullRequestNumber,
+      })))
+      setGenerationPlan(planFor(input, true))
+      setAwaitingConfirmation(true)
+      setRateLimitStatus(source.getRateLimitStatus() ?? rateLimitStatus)
+    } catch (caughtError) {
+      setRateLimitStatus(source?.getRateLimitStatus() ?? rateLimitStatus)
+
+      if (caughtError instanceof GitSourceError) {
+        setErrorCode(caughtError.code)
+      } else {
+        setErrorCode('unknown')
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  async function handleConfirmGeneration() {
+    if (!sourceRef.current || !pipelineRef.current || !sourceInputRef.current) {
+      return
+    }
+
+    setIsLoading(true)
+    setErrorCode(null)
+
+    try {
       const input: GitSourceInput = {
-        ...repository,
-        branch: branchInput.trim() || undefined,
+        ...sourceInputRef.current,
         options: {
-          maxCommitsPerBranch: 100,
-          includeContributors: false,
-          includePullRequests: true,
-          includeReleases: true,
-          includeTags: true,
-          pullRequestBranchLimit: pullRequestLimit,
+          ...sourceInputRef.current.options,
+          includePullRequestCommits: true,
         },
       }
       sourceInputRef.current = input
-      const result = await pipeline.render(input, currentSettings())
+      const result = await pipelineRef.current.render(input, currentSettings())
 
       setSnapshot(result.snapshot)
       setSvg(result.svg)
       setWarnings(result.warnings)
-      setRateLimitStatus(source.getRateLimitStatus() ?? rateLimitStatus)
+      setAwaitingConfirmation(false)
+      setGenerationPlan(null)
+      setRateLimitStatus(sourceRef.current.getRateLimitStatus() ?? rateLimitStatus)
     } catch (caughtError) {
-      setRateLimitStatus(source?.getRateLimitStatus() ?? rateLimitStatus)
+      setRateLimitStatus(sourceRef.current.getRateLimitStatus() ?? rateLimitStatus)
 
       if (caughtError instanceof GitSourceError) {
         setErrorCode(caughtError.code)
@@ -600,7 +753,10 @@ function App() {
               <input
                 id="repository"
                 value={repositoryInput}
-                onChange={(event) => setRepositoryInput(event.target.value)}
+                onChange={(event) => {
+                  setRepositoryInput(event.target.value)
+                  invalidatePreflight(true)
+                }}
                 placeholder="owner/repo"
               />
             </label>
@@ -609,12 +765,15 @@ function App() {
               <input
                 id="branch"
                 value={branchInput}
-                onChange={(event) => setBranchInput(event.target.value)}
+                onChange={(event) => {
+                  setBranchInput(event.target.value)
+                  invalidatePreflight(true)
+                }}
                 placeholder="main"
               />
             </label>
             <button type="submit" disabled={isLoading}>
-              {isLoading ? t.status.loading : t.generateGraph}
+              {isLoading ? t.status.loading : t.preflightRepository}
             </button>
           </form>
         </section>
@@ -679,7 +838,46 @@ function App() {
               </select>
             </label>
           </div>
+          <div className="data-risk-warning" role="note">
+            <strong>⚠</strong>
+            <span>{t.largeDataWarning}</span>
+          </div>
         </section>
+
+        {generationPlan && awaitingConfirmation && (
+          <section className="generation-plan" aria-label={t.generationPlan}>
+            <div className="panel-heading">
+              <h2>{t.generationPlan}</h2>
+              <span>{t.preflightHint}</span>
+            </div>
+            <dl className="generation-plan-summary">
+              <div>
+                <dt>{t.repository}</dt>
+                <dd>{generationPlan.repository}</dd>
+              </div>
+              <div>
+                <dt>{t.branch}</dt>
+                <dd>{generationPlan.branch}</dd>
+              </div>
+            </dl>
+            <div className="planned-api-calls">
+              <strong>{t.plannedApiCalls}</strong>
+              <ul>
+                {generationPlan.apiCalls.map((apiCall) => (
+                  <li key={apiCall}>{apiCall}</li>
+                ))}
+              </ul>
+            </div>
+            <button
+              className="confirm-generation-button"
+              type="button"
+              disabled={isLoading}
+              onClick={() => void handleConfirmGeneration()}
+            >
+              {isLoading ? t.status.loading : t.confirmGenerateGraph}
+            </button>
+          </section>
+        )}
 
         {errorMessage && (
           <section className="alert" role="alert">
