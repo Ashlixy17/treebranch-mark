@@ -348,8 +348,9 @@ function normalizeReleases(
     const exactSha = tag?.commitSha ?? (mainCommitsBySha.has(release.target_commitish)
       ? release.target_commitish
       : null)
-    const targetSha = exactSha ?? nearestCommit(mainCommits, release.published_at)?.sha ?? null
-    const inferred = targetSha === null || !mainCommitsBySha.has(targetSha)
+    const exactInWindow = exactSha !== null && mainCommitsBySha.has(exactSha) ? exactSha : null
+    const targetSha = exactInWindow ?? nearestCommit(mainCommits, release.published_at)?.sha ?? null
+    const inferred = exactInWindow === null
 
     if (inferred) {
       warnings.push({
