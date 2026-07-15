@@ -9,7 +9,9 @@ import type {
   GitHubCommitResponse,
   GitHubContributorResponse,
   GitHubPullRequestResponse,
+  GitHubReleaseResponse,
   GitHubRepositoryResponse,
+  GitHubTagResponse,
 } from './githubRestClient'
 
 describe('GitHubApiSource', () => {
@@ -69,17 +71,108 @@ describe('GitHubApiSource', () => {
       {
         number: 7,
         title: 'Merge feature',
-        state: 'closed',
+        state: 'merged',
         url: 'https://github.com/octo/repo/pull/7',
         authorLogin: 'mona',
+        authorAvatarUrl: 'https://avatars.githubusercontent.com/u/1',
         createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-02T00:00:00Z',
         mergedAt: '2026-01-02T00:00:00Z',
         baseBranch: 'main',
         headBranch: 'feature',
+        headRepositoryFullName: 'contributor/repo',
+        headSha: 'sha-feature',
         mergeCommitSha: 'sha-main',
+        commits: [],
+        loadState: 'complete',
+        truncated: false,
       },
     ])
     expect(client.lastPerPage).toBe(25)
+  })
+
+  it('loads external fork PR branches, releases, and tags for the selected branch', async () => {
+    const client = new ForkTimelineFakeClient()
+    const source = createSource(client)
+
+    const snapshot = await source.loadRepository({
+      owner: 'octo',
+      repo: 'repo',
+      branch: 'main',
+      options: {
+        includeTags: true,
+        includeReleases: true,
+        pullRequestBranchLimit: 10,
+      },
+    })
+
+    expect(snapshot.pullRequests.map((pullRequest) => [pullRequest.number, pullRequest.state])).toEqual([
+      [9, 'open'],
+      [7, 'merged'],
+    ])
+    const mergedPullRequest = snapshot.pullRequests.find((pullRequest) => pullRequest.number === 7)
+    expect(mergedPullRequest?.commits.map((commit) => commit.sha)).toEqual(['sha-feature'])
+    expect(mergedPullRequest?.loadState).toBe('complete')
+    expect(snapshot.releases).toEqual([
+      expect.objectContaining({ tagName: 'v1.0.0', targetSha: 'sha-main', inferred: false }),
+    ])
+    expect(snapshot.tags).toEqual([
+      expect.objectContaining({ name: 'v1.0.0', commitSha: 'sha-main' }),
+    ])
+    expect(snapshot.pullRequestCapacity).toEqual({ requested: 10, mergedLoaded: 1, openLoaded: 1 })
+  })
+
+  it('keeps the snapshot usable when one PR commit request fails', async () => {
+    const source = createSource(new PartialForkTimelineFakeClient())
+
+    const snapshot = await source.loadRepository({
+      owner: 'octo',
+      repo: 'repo',
+      branch: 'main',
+      options: { pullRequestBranchLimit: 10 },
+    })
+
+    expect(snapshot.pullRequests.find((pullRequest) => pullRequest.number === 7)).toMatchObject({
+      loadState: 'partial',
+      commits: [],
+    })
+    expect(snapshot.warnings).toEqual([
+      expect.objectContaining({ code: 'pr-commits-unavailable', pullRequestNumber: 7 }),
+    ])
+  })
+
+  it('marks a PR with 250 returned commits as truncated', async () => {
+    const source = createSource(new TruncatedForkTimelineFakeClient())
+
+    const snapshot = await source.loadRepository({
+      owner: 'octo',
+      repo: 'repo',
+      branch: 'main',
+      options: { pullRequestBranchLimit: 10 },
+    })
+
+    expect(snapshot.pullRequests.find((pullRequest) => pullRequest.number === 7)).toMatchObject({
+      loadState: 'partial',
+      truncated: true,
+    })
+    expect(snapshot.warnings).toEqual([
+      expect.objectContaining({ code: 'pr-commits-truncated', pullRequestNumber: 7 }),
+    ])
+  })
+
+  it('does not re-request completed PR histories when capacity increases', async () => {
+    const client = new ForkTimelineFakeClient()
+    const source = createSource(client)
+    const baseInput = {
+      owner: 'octo',
+      repo: 'repo',
+      branch: 'main',
+    }
+
+    await source.loadRepository({ ...baseInput, options: { pullRequestBranchLimit: 10 } })
+    await source.loadRepository({ ...baseInput, options: { pullRequestBranchLimit: 20 } })
+
+    expect(client.pullRequestCommitRequests).toEqual([7, 9])
   })
 
   it('uses the default max commit count when the option is omitted', async () => {
@@ -232,6 +325,42 @@ describe('GitHubApiSource', () => {
 })
 
 describe('GitHubRestClient errors', () => {
+  it('requests all pull requests and PR commits', async () => {
+    const urls: string[] = []
+    const client = new GitHubRestClient({
+      fetcher: async (input) => {
+        urls.push(String(input))
+        return new Response('[]', { status: 200 })
+      },
+    })
+
+    await client.listPullRequests('octo', 'repo')
+    await client.listPullRequestCommits('octo', 'repo', 7)
+
+    expect(urls).toEqual([
+      'https://api.github.com/repos/octo/repo/pulls?state=all&sort=updated&direction=desc&per_page=100',
+      'https://api.github.com/repos/octo/repo/pulls/7/commits?per_page=250',
+    ])
+  })
+
+  it('requests releases and tags', async () => {
+    const urls: string[] = []
+    const client = new GitHubRestClient({
+      fetcher: async (input) => {
+        urls.push(String(input))
+        return new Response('[]', { status: 200 })
+      },
+    })
+
+    await client.listReleases('octo', 'repo')
+    await client.listTags('octo', 'repo')
+
+    expect(urls).toEqual([
+      'https://api.github.com/repos/octo/repo/releases?per_page=100',
+      'https://api.github.com/repos/octo/repo/tags?per_page=100',
+    ])
+  })
+
   it('sends an authorization header when token is provided', async () => {
     const capturedHeaders: Headers[] = []
     const client = new GitHubRestClient({
@@ -458,6 +587,90 @@ class FakeGitHubRestClient extends GitHubRestClient {
     this.pullRequestsLoaded = true
     return Promise.resolve(pullRequestsFixture)
   }
+
+  override listPullRequests(): Promise<GitHubPullRequestResponse[]> {
+    this.pullRequestsLoaded = true
+    return Promise.resolve(pullRequestsFixture)
+  }
+
+  override listPullRequestCommits(
+    _owner: string,
+    _repo: string,
+    _pullRequestNumber: number,
+  ): Promise<GitHubCommitResponse[]> {
+    return Promise.resolve([])
+  }
+
+  override listReleases(): Promise<GitHubReleaseResponse[]> {
+    return Promise.resolve([])
+  }
+
+  override listTags(): Promise<GitHubTagResponse[]> {
+    return Promise.resolve([])
+  }
+}
+
+class ForkTimelineFakeClient extends FakeGitHubRestClient {
+  pullRequestCommitRequests: number[] = []
+
+  override listPullRequests(): Promise<GitHubPullRequestResponse[]> {
+    this.pullRequestsLoaded = true
+    return Promise.resolve(forkPullRequestsFixture)
+  }
+
+  override listPullRequestCommits(
+    _owner: string,
+    _repo: string,
+    pullRequestNumber: number,
+  ): Promise<GitHubCommitResponse[]> {
+    this.pullRequestCommitRequests.push(pullRequestNumber)
+    return Promise.resolve(
+      pullRequestNumber === 7
+        ? [commitFixture({ sha: 'sha-feature', parents: ['sha-main'] })]
+        : [commitFixture({ sha: 'sha-open', parents: ['sha-main'] })],
+    )
+  }
+
+  override listReleases(): Promise<GitHubReleaseResponse[]> {
+    return Promise.resolve(releasesFixture)
+  }
+
+  override listTags(): Promise<GitHubTagResponse[]> {
+    return Promise.resolve(tagsFixture)
+  }
+}
+
+class PartialForkTimelineFakeClient extends ForkTimelineFakeClient {
+  override listPullRequestCommits(
+    owner: string,
+    repo: string,
+    pullRequestNumber: number,
+  ): Promise<GitHubCommitResponse[]> {
+    if (pullRequestNumber === 7) {
+      return Promise.reject(new GitSourceError('network-error', 'PR commits unavailable'))
+    }
+
+    return super.listPullRequestCommits(owner, repo, pullRequestNumber)
+  }
+}
+
+class TruncatedForkTimelineFakeClient extends ForkTimelineFakeClient {
+  override listPullRequestCommits(
+    owner: string,
+    repo: string,
+    pullRequestNumber: number,
+  ): Promise<GitHubCommitResponse[]> {
+    if (pullRequestNumber === 7) {
+      this.pullRequestCommitRequests.push(pullRequestNumber)
+      return Promise.resolve(
+        Array.from({ length: 250 }, (_, index) =>
+          commitFixture({ sha: `truncated-${index}`, parents: ['sha-main'] }),
+        ),
+      )
+    }
+
+    return super.listPullRequestCommits(owner, repo, pullRequestNumber)
+  }
 }
 
 class FlakyGitHubRestClient extends FakeGitHubRestClient {
@@ -536,12 +749,18 @@ const pullRequestsFixture: GitHubPullRequestResponse[] = [
       html_url: 'https://github.com/mona',
     },
     created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-02T00:00:00Z',
     merged_at: '2026-01-02T00:00:00Z',
     base: {
       ref: 'main',
     },
     head: {
       ref: 'feature',
+      sha: 'sha-feature',
+      repo: {
+        full_name: 'contributor/repo',
+        fork: true,
+      },
     },
     merge_commit_sha: 'sha-main',
   },
@@ -552,14 +771,70 @@ const pullRequestsFixture: GitHubPullRequestResponse[] = [
     html_url: 'https://github.com/octo/repo/pull/8',
     user: null,
     created_at: '2026-01-03T00:00:00Z',
+    updated_at: '2026-01-03T00:00:00Z',
     merged_at: null,
     base: {
       ref: 'main',
     },
     head: {
       ref: 'other',
+      sha: 'sha-other',
+      repo: {
+        full_name: 'contributor/repo',
+        fork: true,
+      },
     },
     merge_commit_sha: null,
+  },
+]
+
+const forkPullRequestsFixture: GitHubPullRequestResponse[] = [
+  pullRequestsFixture[0],
+  {
+    number: 9,
+    title: 'Open feature',
+    state: 'open',
+    html_url: 'https://github.com/octo/repo/pull/9',
+    user: {
+      login: 'ada',
+      avatar_url: 'https://avatars.githubusercontent.com/u/2',
+      html_url: 'https://github.com/ada',
+    },
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-03T00:00:00Z',
+    merged_at: null,
+    base: { ref: 'main' },
+    head: {
+      ref: 'open-feature',
+      sha: 'sha-open',
+      repo: { full_name: 'ada/repo', fork: true },
+    },
+    merge_commit_sha: null,
+  },
+]
+
+const releasesFixture: GitHubReleaseResponse[] = [
+  {
+    id: 1,
+    tag_name: 'v1.0.0',
+    name: 'v1.0.0',
+    html_url: 'https://github.com/octo/repo/releases/tag/v1.0.0',
+    published_at: '2026-01-02T00:00:00Z',
+    prerelease: false,
+    target_commitish: 'main',
+    draft: false,
+  },
+]
+
+const tagsFixture: GitHubTagResponse[] = [
+  {
+    name: 'v1.0.0',
+    zipball_url: 'https://api.github.com/repos/octo/repo/zipball/v1.0.0',
+    tarball_url: 'https://api.github.com/repos/octo/repo/tarball/v1.0.0',
+    commit: {
+      sha: 'sha-main',
+      url: 'https://api.github.com/repos/octo/repo/commits/sha-main',
+    },
   },
 ]
 

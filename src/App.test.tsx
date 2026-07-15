@@ -46,6 +46,53 @@ afterAll(() => {
 })
 
 describe('App GitHub token input', () => {
+  it('renders Graph Settings with the confirmed defaults', () => {
+    renderApp()
+
+    expect(document.querySelector('.graph-settings-panel')).not.toBeNull()
+    expect(getTimelineGrouping().value).toBe('month')
+    expect(getMainNodeType().value).toBe('commit')
+    expect(getIncludeOpenPullRequests().checked).toBe(false)
+    expect(getPullRequestLimit().value).toBe('20')
+  })
+
+  it('changes main node mode without requesting the repository again', async () => {
+    const capturedUrls: string[] = []
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async (input) => {
+      capturedUrls.push(String(input))
+      return fixtureResponseFor(input)
+    }) as typeof fetch
+
+    try {
+      renderApp()
+      await submitRepositoryForm()
+      const requestCount = capturedUrls.length
+
+      changeSelectValue(getMainNodeType(), 'release')
+
+      expect(capturedUrls).toHaveLength(requestCount)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('keeps open PR branches disabled by default and enables them locally', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async (input) => fixtureResponseFor(input)) as typeof fetch
+
+    try {
+      renderApp()
+      await submitRepositoryForm()
+
+      expect(getIncludeOpenPullRequests().checked).toBe(false)
+      changeCheckboxValue(getIncludeOpenPullRequests(), true)
+      expect(getIncludeOpenPullRequests().checked).toBe(true)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
   it('renders month as the default graph grouping setting', () => {
     renderApp()
 
@@ -371,6 +418,14 @@ describe('App GitHub token input', () => {
         ], 200, rateLimitHeaders)
       }
 
+      if (url.includes('/repos/vuejs/core/contributors?')) {
+        return jsonResponse([], 200, rateLimitHeaders)
+      }
+
+      if (url.includes('/repos/vuejs/core/pulls?') || url.includes('/repos/vuejs/core/releases?') || url.includes('/repos/vuejs/core/tags?')) {
+        return jsonResponse([], 200, rateLimitHeaders)
+      }
+
       return jsonResponse({}, 404)
     }) as typeof fetch
 
@@ -430,6 +485,27 @@ function getTokenInput(): HTMLInputElement {
 
 function getTimelineGrouping(): HTMLSelectElement {
   const select = document.querySelector<HTMLSelectElement>('#timeline-grouping')
+
+  expect(select).not.toBeNull()
+  return select as HTMLSelectElement
+}
+
+function getMainNodeType(): HTMLSelectElement {
+  const select = document.querySelector<HTMLSelectElement>('#main-node-type')
+
+  expect(select).not.toBeNull()
+  return select as HTMLSelectElement
+}
+
+function getIncludeOpenPullRequests(): HTMLInputElement {
+  const input = document.querySelector<HTMLInputElement>('#include-open-prs')
+
+  expect(input).not.toBeNull()
+  return input as HTMLInputElement
+}
+
+function getPullRequestLimit(): HTMLSelectElement {
+  const select = document.querySelector<HTMLSelectElement>('#pull-request-limit')
 
   expect(select).not.toBeNull()
   return select as HTMLSelectElement
@@ -529,6 +605,15 @@ function changeSelectValue(select: HTMLSelectElement, value: string) {
   })
 }
 
+function changeCheckboxValue(input: HTMLInputElement, checked: boolean) {
+  const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'checked')?.set
+
+  act(() => {
+    valueSetter?.call(input, checked)
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+}
+
 async function submitRepositoryForm() {
   const form = document.querySelector<HTMLFormElement>('.repo-form')
 
@@ -537,6 +622,13 @@ async function submitRepositoryForm() {
   await act(async () => {
     form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
   })
+
+  const confirmButton = document.querySelector<HTMLButtonElement>('.confirm-generation-button')
+  if (confirmButton) {
+    await act(async () => {
+      confirmButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+  }
 }
 
 function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
@@ -610,6 +702,14 @@ function fixtureResponseFor(input: RequestInfo | URL): Response {
         parents: [],
       },
     ])
+  }
+
+  if (url.includes('/repos/vuejs/core/contributors?')) {
+    return jsonResponse([])
+  }
+
+  if (url.includes('/repos/vuejs/core/pulls?') || url.includes('/repos/vuejs/core/releases?') || url.includes('/repos/vuejs/core/tags?')) {
+    return jsonResponse([])
   }
 
   return jsonResponse({}, 404)

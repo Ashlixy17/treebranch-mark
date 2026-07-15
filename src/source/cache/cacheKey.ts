@@ -7,6 +7,7 @@ export function createGitHubSnapshotCacheKey(input: GitSourceInput): string {
   const includePullRequests = input.options?.includePullRequests ?? true
   const includeContributors = input.options?.includeContributors ?? true
   const includeTags = input.options?.includeTags ?? false
+  const includeReleases = input.options?.includeReleases ?? false
 
   return [
     'github',
@@ -16,5 +17,6 @@ export function createGitHubSnapshotCacheKey(input: GitSourceInput): string {
     includePullRequests,
     includeContributors,
     includeTags,
+    includeReleases,
   ].join(':')
 }

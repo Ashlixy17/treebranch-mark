@@ -10,11 +10,11 @@ describe('App control panel layout', () => {
     expect(cssText).toMatch(
       /\.repo-form\s*{[^}]*grid-template-columns:\s*minmax\(280px, 1fr\) minmax\(120px, 180px\);/s,
     )
-    expect(cssText).toMatch(/\.grouping-field\s*{[^}]*grid-column:\s*2;[^}]*grid-row:\s*1;/s)
     expect(cssText).toMatch(/\.branch-field\s*{[^}]*grid-column:\s*2;[^}]*grid-row:\s*2;/s)
     expect(cssText).toMatch(
       /\.repo-form button\s*{[^}]*grid-column:\s*1 \/ -1;[^}]*grid-row:\s*3;[^}]*justify-self:\s*center;/s,
     )
+    expect(cssText).toMatch(/\.graph-settings-grid\s*{[^}]*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\);/s)
   })
 
   it('keeps the interactive SVG transform inside a draggable viewport', () => {

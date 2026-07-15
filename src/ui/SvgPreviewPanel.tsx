@@ -49,6 +49,7 @@ export function SvgPreviewPanel({
   const [view, setView] = useState<ViewState>(DEFAULT_VIEW)
   const [isDragging, setIsDragging] = useState(false)
   const [isWheelZooming, setIsWheelZooming] = useState(false)
+  const naturalWidth = getSvgViewBoxWidth(svg)
 
   useEffect(() => {
     setView(DEFAULT_VIEW)
@@ -209,7 +210,10 @@ export function SvgPreviewPanel({
         >
           <div
             className="svg-preview-content"
-            style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}
+            style={{
+              width: naturalWidth ? `max(100%, ${naturalWidth}px)` : '100%',
+              transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
+            }}
             dangerouslySetInnerHTML={{ __html: svg }}
           />
         </div>
@@ -223,6 +227,16 @@ export function SvgPreviewPanel({
       )}
     </section>
   )
+}
+
+function getSvgViewBoxWidth(svg: string | null): number | null {
+  const viewBox = svg?.match(/viewBox="[^"]*\s+[^"]*\s+([\d.]+)\s+([\d.]+)"/)
+  if (!viewBox) {
+    return null
+  }
+
+  const width = Number(viewBox[1])
+  return Number.isFinite(width) && width > 0 ? Math.ceil(width) : null
 }
 
 function zoomAt(current: ViewState, requestedScale: number, origin: { x: number; y: number }): ViewState {
